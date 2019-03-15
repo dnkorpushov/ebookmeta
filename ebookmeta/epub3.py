@@ -10,7 +10,7 @@ from .exceptions import BadFormat, WriteEpubException
 from .utils import person_sort_name
 
 
-class Epub2:
+class Epub3:
     file = ''
     version = ''
     tree = None
@@ -46,8 +46,8 @@ class Epub2:
             self.tree = etree.fromstring(opf_data)
             v = self.tree.xpath('/opf:package/@version', namespaces=self.ns)[0]
             self.version = v[:1]
-            if self.version != '2':
-                raise BadFormat('wrong epub version')
+            if self.version != '3':
+                raise BadFormat('wrong epub3 version')
         else:
             raise BadFormat('wrong zip format')
 
@@ -93,21 +93,43 @@ class Epub2:
             for attr in identifier.attrib:
                 metadata.identifier['attrib'][attr] = identifier.attrib[attr]
 
-        metadata.title = self.get('opf:metadata/dc:title/text()')
-        metadata.author = self.getall('opf:metadata/dc:creator[@opf:role="aut" or not(@opf:role)]/text()')
+        title_list = self.getall('opf:metadata/dc:title')
+        for e in title_list:
+            value = self.get_element_refines(self.get_element_id(e), property='title-type')
+            if value == 'main' or not value:
+                metadata.title = e.text
+        creator_list = self.getall('opf:metadata/dc:creator')
+        for e in creator_list:
+            value = self.get_element_refines(self.get_element_id(e), property='role')
+            if value == 'aut' or not value:
+                print(e.text)
+
+                metadata.author.append(e.text)
+            elif value == 'trl':
+                metadata.translator.append(e.text)
         metadata.series = self.get('opf:metadata/opf:meta[@name="calibre:series"]/@content')
         metadata.series_index = self.get('opf:metadata/opf:meta[@name="calibre:series_index"]/@content')
         metadata.tag = self.getall('opf:metadata/dc:subject/text()')
         metadata.description = self.get('opf:metadata/dc:description/text()')
-        metadata.translator = self.getall('opf:metadata/dc:creator[@opf:role="trl"]/text()')
         metadata.lang = self.get('opf:metadata/dc:language/text()')
         metadata.date = self.get('opf:metadata/dc:date/text()')
         metadata.publisher = self.get('opf:metadata/dc:publisher/text()')
-        metadata.cover_image_data = self.get_cover_image()
+        # metadata.cover_image_data = self.get_cover_image()
         metadata.format = 'epub'
         metadata.file = self.file
 
         return metadata
+
+    def get_element_refines(self, id, property):
+
+        value = self.get('opf:metadata/opf:meta[@refines="#{}" and @property="{}"]/text()'.format(id, property))
+        if value is not None:
+            return value
+        return ''
+
+    def get_element_id(self, elem):
+
+        return elem.attrib['id'] if 'id' in elem.attrib else ''
 
     def get_cover_image(self):
 
@@ -122,7 +144,10 @@ class Epub2:
 
     def get_cover_id(self):
 
-        return self.get('opf:metadata/opf:meta[@name="cover"]/@content')
+        cover_id = self.get('opf:metadata/opf:meta[@name="cover"]/@content')
+        if cover_id is None:
+            cover_id = self.get('opf:manifest/opf:item[@properties="cover-image"]/@id')
+        return cover_id
 
     def get_cover_href(self, cover_id):
 

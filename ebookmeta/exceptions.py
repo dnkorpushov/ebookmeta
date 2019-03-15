@@ -15,3 +15,7 @@ class Error(Exception):
 
 class BadFormat(Error):
     pass
+
+
+class WriteEpubException(Error):
+    pass

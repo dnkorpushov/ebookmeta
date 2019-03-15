@@ -47,7 +47,7 @@ class Fb2Meta:
     def get_metadata(self):
 
         meta = Metadata()
-        meta.title = self.get('//fb:description/fb:title-info/fb:title/text()')
+        meta.title = self.get('//fb:description/fb:title-info/fb:book-title/text()')
         meta.author = self.get_author_list()
         meta.series = self.get_series()
         meta.series_index = self.get_series_index()
@@ -59,6 +59,7 @@ class Fb2Meta:
         meta.publisher = self.get('//fb:description/fb:publish-info/fb:publisher/text()')
         meta.description = self.get_description()
         meta.cover_image_data = self.get_cover_data(self.get_cover_name())
+        meta.identifier = self.get('//fb:description/fb:document-info/fb:id/text()')
         meta.format = 'fb2'
         meta.file = self.file
         return meta
@@ -90,12 +91,10 @@ class Fb2Meta:
 
         node_list = self.getall('//fb:description/fb:title-info/fb:author')
         author_list = []
-        author_sort_list = []
         for node in node_list:
-            author, author_sort = self.get_person(node)
+            author = self.get_person(node)
             author_list.append(author)
-            author_sort_list.append(author_sort)
-        return author_list, author_sort_list
+        return author_list
 
     def get_translator_list(self):
 
@@ -151,65 +150,94 @@ class Fb2Meta:
 
         return self.tree.xpath(xpath, namespaces=self.ns)
 
-    def set_metadata(self, meta):
+    def set_metadata(self, metadata):
+
         # Generate new title-info for fb2
-        nsmap = {None: 'http://www.gribuser.ru/xml/fictionbook/2.0', 'l': 'http://www.w3.org/1999/xlink'}
-        title_info = etree.Element('title-info', nsmap=nsmap)
-        etree.SubElement(title_info, 'book-title').text = meta.title
-        for author in meta.author:
-            node = self._create_person_node('author', author)
+        title_info = etree.Element('title-info', nsmap=self.ns)
+        etree.SubElement(title_info, 'book-title', nsmap=self.ns).text = metadata.title
+
+        for author in metadata.author:
+            node = self.create_person_node('author', author)
             title_info.append(node)
-        for tag in meta.tag:
-            etree.SubElement(title_info, 'genre').text = tag
-        if meta.series:
-            series_node = etree.SubElement(title_info, 'sequence')
-            series_node.attrib['name'] = meta.series
-            if meta.series_index:
-                series_node.attrib['number'] = str(meta.series_index)
-        if meta.description:
-            node = etree.SubElement(title_info, 'annotation')
-            etree.SubElement(node, 'p').text = meta.description
-        if meta.date:
-            etree.SubElement(title_info, 'date').text = meta.date
-        if meta.cover_image_name:
-            node = etree.SubElement(title_info, 'coverpage')
-            image_node = etree.SubElement(node, 'image')
-            image_node.attrib[QName('http://www.w3.org/1999/xlink', 'href')] = '#{}'.format(meta.cover_image_name)
-        else:
-            # Cover cleared - delete cover image if exist
-            cover_name, cover_data = self._get_cover()
-            if cover_name and cover_data is not None:
-                node = self._find('//fb:binary[@id="{0}"]'.format(cover_name))
-                if node is not None:
-                    node.getparent().remove(node)
-        if meta.lang:
-            etree.SubElement(title_info, 'lang').text = meta.lang
-        if meta.src_lang:
-            etree.SubElement(title_info, 'src-lang').text = meta.src_lang
-        for translator in meta.translator:
+
+        for tag in metadata.tag:
+            etree.SubElement(title_info, 'genre', nsmap=self.ns).text = tag
+
+        if metadata.series:
+            series_node = etree.SubElement(title_info, 'sequence', nsmap=self.ns)
+            series_node.attrib['name'] = metadata.series
+            if metadata.series_index:
+                series_node.attrib['number'] = str(metadata.series_index)
+
+        if metadata.description:
+            node = etree.SubElement(title_info, 'annotation', nsmap=self.ns)
+            etree.SubElement(node, 'p', nsmap=self.ns).text = metadata.description
+
+        if metadata.date:
+            etree.SubElement(title_info, 'date', nsmap=self.ns).text = metadata.date
+
+        if metadata.lang:
+            etree.SubElement(title_info, 'lang', nsmap=self.ns).text = metadata.lang
+
+        if metadata.src_lang:
+            etree.SubElement(title_info, 'src-lang', nsmap=self.ns).text = metadata.src_lang
+
+        for translator in metadata.translator:
             node = self._create_person_node('translator', translator)
             title_info.append(node)
 
+        if metadata.cover_image_data:
+            cover_name = self.get_cover_name()
+            if cover_name is None:
+                cover_name = 'cover.jpg'
+
+            node = etree.SubElement(title_info, 'coverpage', nsmap=self.ns)
+            image_node = etree.SubElement(node, 'image', nsmap=self.ns)
+            image_node.attrib[QName('http://www.w3.org/1999/xlink', 'href')] = '#{}'.format(cover_name)
+
+            node = self.get('//fb:binary[@id="{0}"]'.format(cover_name))
+            if node is None:
+                node = etree.SubElement(self.tree.getroot(), 'binary', nsmap=self.ns)
+            node.attrib['id'] = cover_name
+            node.attrib['content-type'] = 'image/jpeg'
+            node.text = base64.encodebytes(metadata.cover_image_data)
+        else:
+            # Cover cleared - delete cover image if exist
+            cover_name = self.get_cover_name()
+            if cover_name is not None:
+                node = self.get('//fb:binary[@id="{0}"]'.format(cover_name))
+                if node is not None:
+                    node.getparent().remove(node)
+
         # replace original title-info
-        title_node = self._find('//fb:description/fb:title-info')
+        title_node = self.get('//fb:description/fb:title-info')
         title_node.getparent().replace(title_node, title_info)
 
-        # Change cover image
-        if meta.cover_image_name and meta.cover_image_data is not None:
-            node = self._find('//fb:binary[@id="{0}"]'.format(meta.cover_image_name))
-            if node is None:
-                node = etree.SubElement(self.tree.getroot(), 'binary')
-            node.attrib['id'] = meta.cover_image_name
-            node.attrib['content-type'] = 'image/jpeg'
-            node.text = base64.encodebytes(meta.cover_image_data)
+        self.save()
 
-    def _create_person_node(self, node_name, person):
-        node = etree.Element(node_name)
-        if person.first_name:
-            etree.SubElement(node, 'first-name').text = person.first_name
-        if person.middle_name:
-            etree.SubElement(node, 'middle-name').text = person.middle_name
-        if person.last_name:
-            etree.SubElement(node, 'last-name').text = person.last_name
+    def create_person_node(self, node_name, person):
+
+        first_name = ''
+        middle_name = ''
+        last_name = ''
+
+        person_parts = person.split()
+        if len(person_parts) == 3:
+            first_name = person_parts[0]
+            middle_name = person_parts[1]
+            last_name = person_parts[2]
+        elif len(person_parts) == 2:
+            first_name = person_parts[0]
+            last_name = person_parts[1]
+        else:
+            last_name = person
+
+        node = etree.Element(node_name, nsmap=self.ns)
+        if first_name:
+            etree.SubElement(node, 'first-name', nsmap=self.ns).text = first_name
+        if middle_name:
+            etree.SubElement(node, 'middle-name', nsmap=self.ns).text = middle_name
+        if last_name:
+            etree.SubElement(node, 'last-name', nsmap=self.ns).text = last_name
 
         return node
