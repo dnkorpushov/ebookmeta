@@ -1,5 +1,6 @@
 import os
 import tempfile
+import datetime
 import shutil
 from lxml import etree
 from lxml.etree import QName
@@ -7,19 +8,10 @@ from lxml.etree import QName
 from .metadata import Metadata
 from .myzipfile import ZipFile, is_zipfile, ZIP_DEFLATED, ZIP_STORED
 from .exceptions import BadFormat, WriteEpubException
-from .utils import person_sort_name
+from .utils import person_sort_name, xstr
 
 
 class Epub3:
-    file = ''
-    version = ''
-    tree = None
-    content_root = ''
-    opf_file = ''
-    cover_href = ''
-    cover_image_data = None
-
-    zip = None
 
     ns = {
         'n': 'urn:oasis:names:tc:opendocument:xmlns:container',
@@ -30,6 +22,13 @@ class Epub3:
     def __init__(self, file):
 
         self.file = file
+        self.version = ''
+        self.tree = None
+        self.content_root = ''
+        self.opf_file = ''
+        self.cover_href = ''
+        self.cover_image_data = None
+
         self.load()
 
     def load(self):
@@ -102,19 +101,21 @@ class Epub3:
         for e in creator_list:
             value = self.get_element_refines(self.get_element_id(e), property='role')
             if value == 'aut' or not value:
-                print(e.text)
-
                 metadata.author.append(e.text)
+                metadata.author_sort.append(person_sort_name(e.text))
             elif value == 'trl':
                 metadata.translator.append(e.text)
-        metadata.series = self.get('opf:metadata/opf:meta[@name="calibre:series"]/@content')
-        metadata.series_index = self.get('opf:metadata/opf:meta[@name="calibre:series_index"]/@content')
-        metadata.tag = self.getall('opf:metadata/dc:subject/text()')
-        metadata.description = self.get('opf:metadata/dc:description/text()')
-        metadata.lang = self.get('opf:metadata/dc:language/text()')
-        metadata.date = self.get('opf:metadata/dc:date/text()')
-        metadata.publisher = self.get('opf:metadata/dc:publisher/text()')
-        # metadata.cover_image_data = self.get_cover_image()
+        metadata.series = xstr(self.get('opf:metadata/opf:meta[@name="calibre:series"]/@content'))
+        metadata.series_index = xstr(self.get('opf:metadata/opf:meta[@name="calibre:series_index"]/@content'))
+        node_list = self.getall('opf:metadata/dc:subject')
+        metadata.tag = []
+        for n in node_list:
+            metadata.tag.append(n.text)
+        metadata.description = xstr(self.get('opf:metadata/dc:description/text()'))
+        metadata.lang = xstr(self.get('opf:metadata/dc:language/text()'))
+        metadata.date = xstr(self.get('opf:metadata/dc:date/text()'))
+        metadata.publisher = xstr(self.get('opf:metadata/dc:publisher/text()'))
+        metadata.cover_image_data = self.get_cover_image()
         metadata.format = 'epub'
         metadata.file = self.file
 
@@ -124,7 +125,7 @@ class Epub3:
 
         value = self.get('opf:metadata/opf:meta[@refines="#{}" and @property="{}"]/text()'.format(id, property))
         if value is not None:
-            return value
+            return xstr(value)
         return ''
 
     def get_element_id(self, elem):
@@ -164,13 +165,20 @@ class Epub3:
                 node.attrib[attr] = metadata.identifier['attrib'][attr]
 
         if metadata.title:
-            self.SubElement(meta, 'dc:title').text = metadata.title
+            node = self.SubElement(meta, 'dc:title')
+            node.text = metadata.title
+            node.attrib['id'] = 'title'
+            self.add_refines(meta, id='title', property='title-type', text='main')
 
+        idx = 1
         for author in metadata.author:
-            self.add_creator(meta, author, 'aut')
+            self.add_creator(meta, name=author, id='author{}'.format(idx), role='aut')
+            idx += 1
 
+        idx = 1
         for translator in metadata.translator:
-            self.add_creator(meta, translator, 'trl')
+            self.add_creator(meta, name=translator, id='translator{}'.format(idx), role='trl')
+            idx += 1
 
         for tag in metadata.tag:
             self.SubElement(meta, 'dc:subject').text = tag
@@ -195,7 +203,11 @@ class Epub3:
         if metadata.series_index:
             node = self.SubElement(meta, 'opf:meta')
             node.attrib['name'] = 'calibre:series_index'
-            node.attrib['content'] = metadata.series_index
+            node.attrib['content'] = str(metadata.series_index)
+
+        node = self.SubElement(meta, 'opf:meta')
+        node.attrib['property'] = 'dcterms:modified'
+        node.text = datetime.datetime.now().isoformat(timespec='seconds') + 'Z'
 
         if metadata.cover_image_data is not None:
             cover_id = self.get_cover_id()
@@ -220,6 +232,7 @@ class Epub3:
                 manifest_node = self.get('opf:manifest')
                 manifest_node.append(node)
             node.attrib['href'] = self.cover_href
+            node.attrib['properties'] = 'cover-image'
             node.attrib['media-type'] = 'image/jpeg'
             self.cover_image_data = metadata.cover_image_data
 
@@ -227,12 +240,20 @@ class Epub3:
             meta_node.getparent().replace(meta_node, meta)
             self.save()
 
-    def add_creator(self, parent, name, role):
+    def add_creator(self, parent, name, id, role):
 
         node = self.SubElement(parent, 'dc:creator')
         node.text = name
-        node.attrib[QName(self.ns['opf'], 'role')] = role
-        node.attrib[QName(self.ns['opf'], 'file-as')] = person_sort_name(name, first_delimiter=', ')
+        node.attrib['id'] = id
+        self.add_refines(parent, id=id, property='file-as', text=person_sort_name(name, first_delimiter=', '))
+        self.add_refines(parent, id, 'role', role)
+
+    def add_refines(self, parent, id, property, text):
+
+        node = self.SubElement(parent, 'opf:meta')
+        node.attrib['refines'] = '#{}'.format(id)
+        node.attrib['property'] = property
+        node.text = text
 
     def Element(self, name):
 

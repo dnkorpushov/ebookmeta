@@ -4,22 +4,23 @@ from lxml.etree import QName
 import base64
 
 from .metadata import Metadata
+from .utils import xstr, person_sort_name
 from .myzipfile import ZipFile, is_zipfile
 
 
 class Fb2Meta:
 
-    file = ''
-    tree = None
-    encoding = ''
+    ns = {
+        'fb': 'http://www.gribuser.ru/xml/fictionbook/2.0',
+        'l': 'http://www.w3.org/1999/xlink'
+    }
 
     def __init__(self, file):
 
-        self.ns = {
-                    'fb': 'http://www.gribuser.ru/xml/fictionbook/2.0',
-                    'l': 'http://www.w3.org/1999/xlink'
-                  }
         self.file = file
+        self.tree = None
+        self.encoding = ''
+
         self.load()
 
     def load(self):
@@ -47,19 +48,23 @@ class Fb2Meta:
     def get_metadata(self):
 
         meta = Metadata()
-        meta.title = self.get('//fb:description/fb:title-info/fb:book-title/text()')
+        meta.title = xstr(self.get('//fb:description/fb:title-info/fb:book-title/text()'))
         meta.author = self.get_author_list()
+        meta.author_sort = []
+        for author in meta.author:
+            meta.author_sort.append(person_sort_name(author))
+
         meta.series = self.get_series()
         meta.series_index = self.get_series_index()
         meta.tag = self.get_genre_list()
         meta.translator = self.get_translator_list()
-        meta.lang = self.get('//fb:description/fb:title-info/fb:lang/text()')
-        meta.src_lang = self.get('//fb:description/fb:title-info/fb:src-lang/text()')
-        meta.date = self.get('//fb:description/fb:title-info/fb:date/text()')
-        meta.publisher = self.get('//fb:description/fb:publish-info/fb:publisher/text()')
+        meta.lang = xstr(self.get('//fb:description/fb:title-info/fb:lang/text()'))
+        meta.src_lang = xstr(self.get('//fb:description/fb:title-info/fb:src-lang/text()'))
+        meta.date = xstr(self.get('//fb:description/fb:title-info/fb:date/text()'))
+        meta.publisher = xstr(self.get('//fb:description/fb:publish-info/fb:publisher/text()'))
         meta.description = self.get_description()
         meta.cover_image_data = self.get_cover_data(self.get_cover_name())
-        meta.identifier = self.get('//fb:description/fb:document-info/fb:id/text()')
+        meta.identifier = xstr(self.get('//fb:description/fb:document-info/fb:id/text()'))
         meta.format = 'fb2'
         meta.file = self.file
         return meta
@@ -101,7 +106,7 @@ class Fb2Meta:
         node_list = self.getall('//fb:description/fb:title-info/fb:translator')
         translator_list = []
         for node in node_list:
-            translator, _ = self.get_person(node)
+            translator = self.get_person(node)
             translator_list.append(translator)
         return translator_list
 
@@ -113,11 +118,11 @@ class Fb2Meta:
 
         for e in node:
             if QName(e).localname == 'first-name':
-                first_name = e.text
+                first_name = xstr(e.text)
             elif QName(e).localname == 'middle-name':
-                middle_name = e.text
+                middle_name = xstr(e.text)
             elif QName(e).localname == 'last-name':
-                last_name = e.text
+                last_name = xstr(e.text)
 
         author = '{} {} {}'.format(first_name, middle_name, last_name)
         return ' '.join(author.split())
@@ -132,12 +137,12 @@ class Fb2Meta:
 
     def get_series(self):
 
-        return self.get('//fb:description/fb:title-info/fb:sequence/@name')
+        return xstr(self.get('//fb:description/fb:title-info/fb:sequence/@name'))
 
     def get_series_index(self):
 
         index = ''
-        index = self.get('//fb:description/fb:title-info/fb:sequence/@number')
+        index = xstr(self.get('//fb:description/fb:title-info/fb:sequence/@number'))
         return index
 
     def get(self, xpath):
@@ -234,10 +239,10 @@ class Fb2Meta:
 
         node = etree.Element(node_name, nsmap=self.ns)
         if first_name:
-            etree.SubElement(node, 'first-name', nsmap=self.ns).text = first_name
+            etree.SubElement(node, 'first-name', nsmap=self.ns).text = first_name.strip()
         if middle_name:
-            etree.SubElement(node, 'middle-name', nsmap=self.ns).text = middle_name
+            etree.SubElement(node, 'middle-name', nsmap=self.ns).text = middle_name.strip()
         if last_name:
-            etree.SubElement(node, 'last-name', nsmap=self.ns).text = last_name
+            etree.SubElement(node, 'last-name', nsmap=self.ns).text = last_name.strip()
 
         return node

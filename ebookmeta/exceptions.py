@@ -19,3 +19,11 @@ class BadFormat(Error):
 
 class WriteEpubException(Error):
     pass
+
+
+class UnknownFormatException(Error):
+    pass
+
+
+class BadEpubVersionException(Error):
+    pass

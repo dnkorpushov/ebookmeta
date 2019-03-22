@@ -1,2 +1,5 @@
+build/
+dist/
+ebookmeta.egg-info/
 *.pyc
 .DS_Store

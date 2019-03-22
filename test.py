@@ -2,10 +2,7 @@ from ebookmeta import get_metadata, set_metadata
 from pprint import pprint
 
 if __name__ == '__main__':
-    meta = get_metadata('c:/work/test/sous-le-vent.epub')
-    meta.title = meta.title + ' 1'
-    # meta = set_metadata(meta.file, meta)
-    # pprint(meta.author)
-    print(meta.author)
-    print(vars(meta))
+    for book in ['c:/work/test/sous-le-vent.epub', 'c:/work/4/test.fb2', 'c:/work/test/test.epub']:
+        metadata = get_metadata(book)
+        print(vars(metadata))
 

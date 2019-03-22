@@ -7,19 +7,10 @@ from lxml.etree import QName
 from .metadata import Metadata
 from .myzipfile import ZipFile, is_zipfile, ZIP_DEFLATED, ZIP_STORED
 from .exceptions import BadFormat, WriteEpubException
-from .utils import person_sort_name
+from .utils import person_sort_name, xstr
 
 
 class Epub2:
-    file = ''
-    version = ''
-    tree = None
-    content_root = ''
-    opf_file = ''
-    cover_href = ''
-    cover_image_data = None
-
-    zip = None
 
     ns = {
         'n': 'urn:oasis:names:tc:opendocument:xmlns:container',
@@ -30,6 +21,13 @@ class Epub2:
     def __init__(self, file):
 
         self.file = file
+        self.version = ''
+        self.tree = None
+        self.content_root = ''
+        self.opf_file = ''
+        self.cover_href = ''
+        self.cover_image_data = None
+
         self.load()
 
     def load(self):
@@ -93,16 +91,27 @@ class Epub2:
             for attr in identifier.attrib:
                 metadata.identifier['attrib'][attr] = identifier.attrib[attr]
 
-        metadata.title = self.get('opf:metadata/dc:title/text()')
-        metadata.author = self.getall('opf:metadata/dc:creator[@opf:role="aut" or not(@opf:role)]/text()')
-        metadata.series = self.get('opf:metadata/opf:meta[@name="calibre:series"]/@content')
-        metadata.series_index = self.get('opf:metadata/opf:meta[@name="calibre:series_index"]/@content')
-        metadata.tag = self.getall('opf:metadata/dc:subject/text()')
-        metadata.description = self.get('opf:metadata/dc:description/text()')
-        metadata.translator = self.getall('opf:metadata/dc:creator[@opf:role="trl"]/text()')
-        metadata.lang = self.get('opf:metadata/dc:language/text()')
-        metadata.date = self.get('opf:metadata/dc:date/text()')
-        metadata.publisher = self.get('opf:metadata/dc:publisher/text()')
+        metadata.title = xstr(self.get('opf:metadata/dc:title/text()'))
+        node_list = self.getall('opf:metadata/dc:creator[@opf:role="aut" or not(@opf:role)]')
+        metadata.author = []
+        metadata.author_sort = []
+        for n in node_list:
+            metadata.author.append(n.text)
+            metadata.author_sort.append(person_sort_name(n.text))
+        metadata.series = xstr(self.get('opf:metadata/opf:meta[@name="calibre:series"]/@content'))
+        metadata.series_index = xstr(self.get('opf:metadata/opf:meta[@name="calibre:series_index"]/@content'))
+        node_list = self.getall('opf:metadata/dc:subject')
+        metadata.tag = []
+        for n in node_list:
+            metadata.tag.append(n.text)
+        metadata.description = xstr(self.get('opf:metadata/dc:description/text()'))
+        node_list = self.getall('opf:metadata/dc:creator[@opf:role="trl"]')
+        metadata.translator = []
+        for n in node_list:
+            metadata.translator.append(n.text)
+        metadata.lang = xstr(self.get('opf:metadata/dc:language/text()'))
+        metadata.date = xstr(self.get('opf:metadata/dc:date/text()'))
+        metadata.publisher = xstr(self.get('opf:metadata/dc:publisher/text()'))
         metadata.cover_image_data = self.get_cover_image()
         metadata.format = 'epub'
         metadata.file = self.file
@@ -170,7 +179,7 @@ class Epub2:
         if metadata.series_index:
             node = self.SubElement(meta, 'opf:meta')
             node.attrib['name'] = 'calibre:series_index'
-            node.attrib['content'] = metadata.series_index
+            node.attrib['content'] = str(metadata.series_index)
 
         if metadata.cover_image_data is not None:
             cover_id = self.get_cover_id()
