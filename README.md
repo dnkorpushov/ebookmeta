@@ -11,6 +11,7 @@ Usage
 Reading
 -------
 ::
+
     import ebookmeta
 
     metadata = ebookmeta.get_metadata('test.epub')
@@ -22,6 +23,7 @@ Reading
 Writing
 -------
 ::
+
     import ebookmeta
 
     metadata = ebookmeta.get_metadata('test.epub')
