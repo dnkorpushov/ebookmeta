@@ -2,6 +2,7 @@ from lxml import etree
 from lxml.etree import QName
 
 import base64
+from io import BytesIO
 
 from .metadata import Metadata
 from .utils import xstr, person_sort_name
@@ -28,7 +29,7 @@ class Fb2Meta:
         if is_zipfile(self.file):
             z = ZipFile(self.file)
             fb2_string = z.read(z.infolist()[0])
-            self.tree = etree.fromstring(fb2_string)
+            self.tree = etree.parse(BytesIO(fb2_string), parser=etree.XMLParser(recover=True))
             z.close()
         else:
             self.tree = etree.parse(self.file, parser=etree.XMLParser(recover=True))
