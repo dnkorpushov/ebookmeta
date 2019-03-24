@@ -189,7 +189,7 @@ class Fb2Meta:
             etree.SubElement(title_info, 'src-lang', nsmap=self.ns).text = metadata.src_lang
 
         for translator in metadata.translator:
-            node = self._create_person_node('translator', translator)
+            node = self.create_person_node('translator', translator)
             title_info.append(node)
 
         if metadata.cover_image_data:
