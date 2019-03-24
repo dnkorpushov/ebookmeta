@@ -17,6 +17,10 @@ class BadFormat(Error):
     pass
 
 
+class BadLanguage(Error):
+    pass
+
+
 class WriteEpubException(Error):
     pass
 

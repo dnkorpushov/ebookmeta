@@ -1,3 +1,7 @@
+from lxml import etree
+
+from .fb2genres import fb2genres
+from .exceptions import BadLanguage
 
 
 class Metadata:
@@ -39,6 +43,21 @@ class Metadata:
     def get_tag_string(self):
         if self.tag:
             return ', '.join(self.tag)
+
+    def get_tag_description_string(self, lang='ru'):
+
+        if lang not in ('ru', 'en'):
+            raise BadLanguage('Only ru and en languages supports')
+        tag_description = []
+        tree = etree.fromstring(fb2genres, parser=etree.XMLParser())
+        xpath_str = '//fbgenrestransfer/genre/subgenres/subgenre[@value="{}"]/genre-descr[@lang="{}"]/@title'
+        for tag in self.tag:
+            node = tree.xpath(xpath_str.format(tag, lang))
+            try:
+                tag_description.append(str(node[0]))
+            except IndexError:
+                tag_description.append(tag)
+        return ', '.join(tag_description)
 
     def set_author_from_string(self, author_string):
         self.author = []
