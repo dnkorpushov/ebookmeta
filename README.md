@@ -30,5 +30,29 @@ ebookmeta.set_metadata('test.epub', metadata)  # Set epub metadata from Metadata
 ## Metadata class
 
 ### Attributes
+* id
+* identifier
+* title
+* author
+* author_sort
+* translator
+* series
+* series_index
+* tag
+* description
+* lang
+* src_lang
+* format
+* date
+* publisher
+* cover_image_data
+* file
 
 ### Methods
+* get_author_string
+* get_author_sort_string
+* get_translator_string
+* get_tag_string
+* set_author_from_string
+* set_translator_from_string
+* set_tag_from_string
