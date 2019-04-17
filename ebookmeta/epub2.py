@@ -131,7 +131,12 @@ class Epub2:
 
     def get_cover_id(self):
 
-        return self.get('opf:metadata/opf:meta[@name="cover"]/@content')
+        cover_id = ''
+        cover_id = self.get('opf:metadata/opf:meta[@name="cover"]/@content')
+        if cover_id is None:
+            cover_id = 'cover.jpg'
+
+        return cover_id
 
     def get_cover_href(self, cover_id):
 
