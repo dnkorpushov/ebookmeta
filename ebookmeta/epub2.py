@@ -126,7 +126,11 @@ class Epub2:
         cover_href = self.get_cover_href(self.get_cover_id())
         if cover_href is not None:
             z = ZipFile(self.file)
-            cover_data = z.read(self.content_root + cover_href)
+            try:
+                cover_data = z.read(self.content_root + cover_href)
+            except KeyError:
+                # Cover image not found
+                pass
             z.close()
 
         return cover_data
