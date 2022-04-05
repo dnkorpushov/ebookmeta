@@ -96,6 +96,8 @@ class Epub2:
         metadata.author = []
         metadata.author_sort = []
         for n in node_list:
+            if n.text is None:
+                continue
             metadata.author.append(n.text)
             metadata.author_sort.append(person_sort_name(n.text))
         metadata.series = xstr(self.get('opf:metadata/opf:meta[@name="calibre:series"]/@content'))

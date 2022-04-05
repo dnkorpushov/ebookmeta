@@ -101,6 +101,8 @@ class Epub3:
         for e in creator_list:
             value = self.get_element_refines(self.get_element_id(e), property='role')
             if value == 'aut' or not value:
+                if e.text is None:
+                    continue
                 metadata.author.append(e.text)
                 metadata.author_sort.append(person_sort_name(e.text))
             elif value == 'trl':
