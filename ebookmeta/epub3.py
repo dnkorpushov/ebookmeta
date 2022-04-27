@@ -101,6 +101,8 @@ class Epub3:
         for e in creator_list:
             value = self.get_element_refines(self.get_element_id(e), property='role')
             if value == 'aut' or not value:
+                if e.text is None:
+                    continue
                 metadata.author.append(e.text)
                 metadata.author_sort.append(person_sort_name(e.text))
             elif value == 'trl':
@@ -138,7 +140,11 @@ class Epub3:
         cover_href = self.get_cover_href(self.get_cover_id())
         if cover_href is not None:
             z = ZipFile(self.file)
-            cover_data = z.read(self.content_root + cover_href)
+            try:
+                cover_data = z.read(self.content_root + cover_href)
+            except KeyError:
+                # Cover image not found
+                pass
             z.close()
 
         return cover_data

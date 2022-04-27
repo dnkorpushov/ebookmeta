@@ -96,6 +96,8 @@ class Epub2:
         metadata.author = []
         metadata.author_sort = []
         for n in node_list:
+            if n.text is None:
+                continue
             metadata.author.append(n.text)
             metadata.author_sort.append(person_sort_name(n.text))
         metadata.series = xstr(self.get('opf:metadata/opf:meta[@name="calibre:series"]/@content'))
@@ -124,7 +126,11 @@ class Epub2:
         cover_href = self.get_cover_href(self.get_cover_id())
         if cover_href is not None:
             z = ZipFile(self.file)
-            cover_data = z.read(self.content_root + cover_href)
+            try:
+                cover_data = z.read(self.content_root + cover_href)
+            except KeyError:
+                # Cover image not found
+                pass
             z.close()
 
         return cover_data
