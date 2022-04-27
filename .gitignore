@@ -3,3 +3,6 @@ dist/
 ebookmeta.egg-info/
 *.pyc
 .DS_Store
+test.py
+*.fb2
+*.zip
