@@ -76,3 +76,7 @@ class Metadata:
         if tag_string and len(tag_string) > 0:
             for tag in tag_string.split(','):
                 self.tag.append(tag.strip())
+
+    
+    
+

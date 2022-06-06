@@ -197,7 +197,7 @@ class Fb2Meta:
 
         if metadata.cover_image_data:
             cover_name = self.get_cover_name()
-            if cover_name is None:
+            if not cover_name:
                 cover_name = 'cover.jpg'
 
             node = etree.SubElement(title_info, 'coverpage', nsmap=self.ns)
