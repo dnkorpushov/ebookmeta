@@ -1,125 +1,59 @@
-import os
-import re
-from unittest import result
 from .metadata import Metadata
 from .exceptions import BadFormat, UnknownFormatException
-from .fb2 import Fb2Meta
+from .fb2 import Fb2
 from .epub2 import Epub2
 from .epub3 import Epub3
-from .utils import replace_keywords, splitext_, normalize_path
 
 __all__ = ['get_metadata', 'set_metadata', 'Metadata', 'get_filename_from_pattern']
 
 
 def _get_ebook(file):
-
     ebook = None
+    
     if file.lower().endswith(('.fb2', '.zip')):
-        ebook = Fb2Meta(file)
+        ebook = Fb2(file)
+
     elif file.lower().endswith('.epub'):
-        try:
-            ebook = Epub2(file)
-        except BadFormat:
-            try:
-                ebook = Epub3(file)
-            except BadFormat:
-                raise UnknownFormatException
+        ebook = Epub2(file)
+        if ebook.version[:1] == '3':
+            ebook = Epub3(file)
     else:
-        raise UnknownFormatException
+       raise UnknownFormatException 
 
     return ebook
 
 
 def get_metadata(file):
-
     ebook = _get_ebook(file)
-    metadata = ebook.get_metadata()
+    meta = Metadata()
 
-    return metadata
+    meta.identifier = ebook.get_identifier()
+    meta.title = ebook.get_title()
+    meta.author_list = ebook.get_author_list()
+    meta.series = ebook.get_series()
+    meta.series_index = ebook.get_series_index()
+    meta.lang = ebook.get_lang()
+    meta.description = ebook.get_description()
+    meta.tag_list = ebook.get_tag_list()
+    meta.translator_list = ebook.get_translator_list()
+    (meta.cover_file_name, meta.cover_media_type, meta.cover_image_data) = ebook.get_cover_data()
+    meta.format = ebook.get_format()
+    meta.format_version = ebook.get_format_version()
+    meta.file = file
+   
+    return meta
 
-
-def set_metadata(file, metadata):
-
+def set_metadata(file, meta):
     ebook = _get_ebook(file)
-    ebook.set_metadata(metadata)
+
+    ebook.set_title(meta.title)
+    ebook.set_author_list(meta.author_list)
+    ebook.set_series(meta.series)
+    ebook.set_series_index(meta.series_index)
+    ebook.set_lang(meta.lang)
+    ebook.set_translator_list(meta.translator_list)
+    ebook.set_cover_data(meta.cover_file_name, meta.cover_media_type, meta.cover_image_data)
+    ebook.save()
 
 
-
-def get_authors_from_pattern(authors, pattern, short=True, lang='ru'):
-    if len(authors) == 0:
-        return ''
-
-    if short and len(authors) > 1:
-        if lang == 'ru':
-            return replace_keywords(pattern, _get_person_dict(authors[0])) + ' и др'
-        else:
-            return replace_keywords(pattern, _get_person_dict(authors[0])) + ', et al'
-    else:
-        result = []
-        for author in authors:
-            result.append(replace_keywords(pattern, _get_person_dict(author)))
-        return ', '.join(result)
-
-
-def get_filename_from_pattern(meta, filename_format, author_format, padnum=2):
-    d = { 
-        '#title': '',
-        '#series': '',
-        '#abbrseries': '',
-        '#ABBRseries': '',
-        '#number': '',
-        '#padnumber': '',
-        '#author': '',
-        '#authors': '',
-        '#translator': '',
-        '#bookid': ''
-    }
-
-    d['#title'] = meta.title
-    d['#author'] = get_authors_from_pattern(meta.author, author_format, short=True, lang=meta.lang)
-    d['#authors'] = get_authors_from_pattern(meta.author, author_format, short=False, lang=meta.lang)
-    d['#bookid'] = meta.identifier
-
-    if meta.series:
-        d['#series'] = meta.series
-        abbr = ''.join(w[0] for w in meta.series.split())
-        d['#abbrseries'] = abbr.lower()
-        d['#ABBRseries'] = abbr.upper()
-
-    if meta.series_index:
-        d['#number'] = str(meta.series_index)
-        d['#padnumber'] = str(meta.series_index).strip().zfill(padnum)
-
-    if len(meta.translator) > 0:
-        try:
-            d['#translator'] = meta.translator[0].split()[-1]
-        except:
-            d['#translator'] = ''
-
-
-    file_ext = splitext_(meta.file)
-    result = replace_keywords(filename_format, d).strip() + file_ext 
- 
-    return normalize_path(result)
-
-
-def _get_person_dict(person):
-    d = { '#f': '', '#m': '', '#l': '', '#fi': '', '#mi':'' }
- 
-    person_parts = person.split()
-    if len(person_parts) == 3:
-        d['#f'] = person_parts[0]
-        d['#m'] = person_parts[1]
-        d['#l'] = person_parts[2]
-    elif len(person_parts) == 2:
-        d['#f'] = person_parts[0]
-        d['#l'] = person_parts[1]
-    else:
-        d['#l'] = person
-
-    if len(d['#f']) > 0:
-        d['#fi'] = d['#f'][0] + '.'
-    if len(d['#m']) > 0: 
-        d['#mi']= d['#m'][0] + '.'
-    return d
 

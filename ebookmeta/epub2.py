@@ -1,69 +1,214 @@
 import os
 import tempfile
 import shutil
-from lxml import etree
-from lxml.etree import QName
-
-from .metadata import Metadata
+from lxml import etree, html
 from .myzipfile import ZipFile, is_zipfile, ZIP_DEFLATED, ZIP_STORED
-from .exceptions import BadFormat, WriteEpubException
-from .utils import person_sort_name, xstr
+from .utils import xstr
 
-
-class Epub2:
-
-    ns = {
+ns_map = {
         'n': 'urn:oasis:names:tc:opendocument:xmlns:container',
         'opf': 'http://www.idpf.org/2007/opf',
         'dc': 'http://purl.org/dc/elements/1.1/'
     }
 
+class Epub2():
     def __init__(self, file):
-
         self.file = file
-        self.version = ''
+        self.opf = None
+        self.content_root = None
         self.tree = None
-        self.content_root = ''
-        self.opf_file = ''
-        self.cover_href = ''
-        self.cover_image_data = None
+        self.version = None
+        self.cover_href = None
+        self.cover_data = None
+        
+        if not is_zipfile(self.file):
+            raise Exception('"{}" is not epub file.'.format(self.file))
+        
+        content = self._get_file_content('META-INF/container.xml')
+        tree = etree.fromstring(content)
+        self.opf = tree.xpath('n:rootfiles/n:rootfile/@full-path', namespaces=ns_map)[0]
+        self.content_root = os.path.dirname(self.opf) + '/'
+        content = self._get_file_content(self.opf)
+        self.tree = etree.fromstring(content)
+        self.version = self.tree.xpath('/opf:package/@version', namespaces=ns_map)[0]
 
-        self.load()
+    ########## Getters ##########
+    def get_title(self):
+        node = self._get('opf:metadata/dc:title')
+        if node is not None:
+            return xstr(node.text)
+    
+    def get_author_list(self):
+        result = []
+        node_list = self._get_all('opf:metadata/dc:creator[@opf:role="aut" or not(@opf:role)]')
+        for node in node_list: result.append(xstr(node.text))
+        return result
+   
+    def get_series(self):
+        node = self._get('opf:metadata/opf:meta[@name="calibre:series"]')
+        if node is not None:
+            if 'content' in node.attrib:
+                return xstr(node.attrib['content'])
 
-    def load(self):
-        if is_zipfile(self.file):
-            z = ZipFile(self.file)
-            container = z.read('META-INF/container.xml')
-            tree = etree.fromstring(container)
-            self.opf_file = tree.xpath('n:rootfiles/n:rootfile/@full-path', namespaces=self.ns)[0]
-            opf_data = z.read(self.opf_file)
-            z.close()
-            self.content_root = os.path.split(self.opf_file)[0]
-            if self.content_root:
-                self.content_root += '/'
-            self.tree = etree.fromstring(opf_data)
-            v = self.tree.xpath('/opf:package/@version', namespaces=self.ns)[0]
-            self.version = v[:1]
-            if self.version != '2':
-                raise BadFormat('wrong epub version')
+    def get_series_index(self):
+        node = self._get('opf:metadata/opf:meta[@name="calibre:series_index"]')
+        if node is not None:
+            if 'content' in node.attrib:
+                return xstr(node.attrib['content'])
+
+    def get_lang(self):
+        node = self._get('opf:metadata/dc:language')
+        if node is not None:
+            return xstr(node.text)
+    
+    def get_tag_list(self):
+        result = []
+        node_list = self._get_all('opf:metadata/dc:subject')
+        for node in node_list: result.append(node.text)
+        return result
+
+    def get_description(self):
+        return xstr(self._get('opf:metadata/dc:description/text()'))
+
+    def get_translator_list(self):
+        result = []
+        node_list = self._get_all('opf:metadata/dc:creator[@opf:role="trl"]')
+        for node in node_list: result.append(xstr(node.text))
+        return result
+
+    def get_format(self):
+        return 'epub'
+    
+    def get_format_version(self):
+        return self.version
+
+    def get_identifier(self):
+         return  xstr(self._get('opf:metadata/dc:identifier/text()'))
+         
+    def get_cover_data(self):
+        cover_id = None
+        media_type = None
+        href = None
+        data = None
+
+        node = self._get('opf:metadata/opf:meta[@name="cover"]')
+        if node is not None:
+            if 'content' in node.attrib: cover_id = node.attrib['content']
+        if cover_id:
+            node = self._get('opf:manifest/opf:item[@id="{0}"]'.format(cover_id))
+            if node is not None:
+                if 'href' in node.attrib: href = node.attrib['href']
+                if 'media-type' in node.attrib: media_type = node.attrib['media-type']
+            if href: data = self._get_file_content(self.content_root + href)
         else:
-            raise BadFormat('wrong zip format')
+            (href, media_type, data) = self._get_cover_from_first_element()
+        return (href, media_type, data)
 
+    def _get_cover_from_first_element(self):
+        media_type = None
+        href = None
+        data = None
+
+        node = self._get('opf:mainfest/opf:item')
+        if node is not node:
+            if 'media-type' in node.attrib: media_type = node.attrib['media-type']
+        if media_type == 'application/xhtml+xml':
+            href = media_type['href'] 
+            if href:
+                content = self._get_file_content(self.content_root + href)
+                tree = html.fromstring(content)
+                nodes = tree.xpath('//img')
+                for node in nodes:
+                    if 'src' in node.attrib:
+                        href = node.attrib['src']
+                        if href.lower().endswith(('.jpg', '.jpeg')): media_type = 'image/jpeg'
+                        elif href.lower().endswith(('.png')): media_type = 'image/png'
+                        else: media_type = None
+                        if media_type:
+                            data = self._get_file_content(self.content_root + href)
+                            return (href, media_type, data)
+        return (None, None, None)
+
+    ########## Setters ##########
+    def set_title(self, title):
+        node = self._get('opf:metadata/dc:title')
+        if node is None:
+            meta_node = self._get('opf:metadata')
+            node = self._sub_element(meta_node, 'dc:title')
+        node.text = title
+
+    def set_author_list(self, author_list):
+        node_list = self._get_all('opf:metadata/dc:creator[@opf:role="aut" or not(@opf:role)]')
+        for node in node_list: node.parent().delete(node)
+        meta_node = self._get('opf:metadata')
+        for author in author_list:
+            node = self._sub_element(meta_node, 'dc:creator')
+            node.attrib['role'] = 'aut'
+            node.text = author
+
+    def set_series(self, series):
+        node = self._get('opf:metadata/opf:meta[@name="calibre:series"]')
+        if node is None:
+            meta_node = self._get('opf:metadata')
+            node = self._sub_element(meta_node, 'opf:meta')
+            node.attrib['name'] = 'calibre:series'
+        node.attrib['content'] = series
+    
+    def set_series_index(self, series_index):
+        node = self._get('opf:metadata/opf:meta[@name="calibre:series_index"]')
+        if node is None:
+            meta_node = self._get('opf:metadata')
+            node = self._sub_element(meta_node, 'opf:meta')
+            node.attrib['name'] = 'calibre:series_index'
+        node.attrib['content'] = str(series_index)
+
+    def set_lang(self, lang):
+        node = self._get('opf:metadata/dc:language')
+        if node is None:
+            meta_node = self._get('opf:metadata')
+            node = self._sub_element(meta_node, 'dc:language')
+        node.text = lang
+
+    def set_tag_list(self, tag_list):
+        node_list = self._get_all('opf:metadata/dc:subject')
+        for node in node_list: node.getparent().delete(node)
+        meta_node = self._get('opf:metadata')
+        for tag in tag_list:
+            node = self._sub_element(meta_node, 'dc:subject')
+            node.text = tag
+            node.tail = '\n'
+
+    def set_translator_list(self, translator_list):
+        node_list = self._get_all('opf:metadata/dc:creator[@opf:role="trl"]')
+        for node in node_list: node.parent().delete(node)
+        meta_node = self._get('opf:metadata')
+        for translator in translator_list:
+            node = self._sub_element(meta_node, 'dc:creator')
+            node.attrib['role'] = 'trl'
+            node.text = translator
+
+    def set_cover_data(self, href, media_type, data):
+        (href, _, _) = self.get_cover_data()
+
+        if href and data:
+            self.cover_href = href
+            self.cover_data = data
+
+    ########## Service methods ##########
     def save(self):
-
         temp_dir = tempfile.mkdtemp(prefix='em')
-        dest_file = os.path.join(temp_dir, os.path.split(self.file)[1])
+        dest_file = os.path.join(temp_dir, os.path.basename(self.file))
         src_zip = ZipFile(self.file, mode='r')
         dest_zip = ZipFile(dest_file, mode='w')
         try:
             for f in src_zip.infolist():
-                if f.filename == self.opf_file:
-                    dest_zip.writestr(self.opf_file, etree.tostring(self.tree, encoding='utf-8',
+                if f.filename == self.opf:
+                    dest_zip.writestr(self.opf, etree.tostring(self.tree, encoding='utf-8',
                                       method='xml', xml_declaration=True, pretty_print=True))
 
-                elif f.filename == self.cover_href:
-                    if self.cover_image_data is not None:
-                        dest_zip.writestr(self.content_root + self.cover_href, self.cover_image_data)
+                elif f.filename == self.content_root + xstr(self.cover_href):
+                    if self.cover_data:
+                        dest_zip.writestr(self.content_root + self.cover_href, self.cover_data)
                 elif f.filename == 'mimetype':
                     buf = src_zip.read(f)
                     dest_zip.writestr(f.filename, buf, ZIP_STORED)
@@ -74,177 +219,26 @@ class Epub2:
             dest_zip.close()
             shutil.copyfile(dest_file, self.file)
             shutil.rmtree(temp_dir)
-        except Exception:
+        except Exception as e:
+            src_zip.close()
+            dest_zip.close()
             shutil.rmtree(temp_dir)
-            raise WriteEpubException
+            raise Exception(repr(e))
 
-    def get_metadata(self):
+    def _get_file_content(self, filename):
+        zipfile = ZipFile(self.file)
+        content = zipfile.read(filename)
+        zipfile.close()
+        return content
 
-        metadata = Metadata()
+    def _get_all(self, xpath_str):
+        return self.tree.xpath(xpath_str, namespaces=ns_map)
 
-        metadata.identifier = {}
-        metadata.identifier['value'] = ''
-        metadata.identifier['attrib'] = {}
-        identifier = self.get('opf:metadata/dc:identifier')
-        if identifier is not None:
-            metadata.identifier['value'] = identifier.text
-            for attr in identifier.attrib:
-                metadata.identifier['attrib'][attr] = identifier.attrib[attr]
+    def _get(self, xpath_str):
+        node_list = self.tree.xpath(xpath_str, namespaces=ns_map)
+        for node in node_list:
+            return node
 
-        metadata.title = xstr(self.get('opf:metadata/dc:title/text()'))
-        node_list = self.getall('opf:metadata/dc:creator[@opf:role="aut" or not(@opf:role)]')
-        metadata.author = []
-        metadata.author_sort = []
-        for n in node_list:
-            if n.text is None:
-                continue
-            metadata.author.append(n.text)
-            metadata.author_sort.append(person_sort_name(n.text))
-        metadata.series = xstr(self.get('opf:metadata/opf:meta[@name="calibre:series"]/@content'))
-        metadata.series_index = xstr(self.get('opf:metadata/opf:meta[@name="calibre:series_index"]/@content'))
-        node_list = self.getall('opf:metadata/dc:subject')
-        metadata.tag = []
-        for n in node_list:
-            metadata.tag.append(n.text)
-        metadata.description = xstr(self.get('opf:metadata/dc:description/text()'))
-        node_list = self.getall('opf:metadata/dc:creator[@opf:role="trl"]')
-        metadata.translator = []
-        for n in node_list:
-            metadata.translator.append(n.text)
-        metadata.lang = xstr(self.get('opf:metadata/dc:language/text()'))
-        metadata.date = xstr(self.get('opf:metadata/dc:date/text()'))
-        metadata.publisher = xstr(self.get('opf:metadata/dc:publisher/text()'))
-        metadata.cover_image_data = self.get_cover_image()
-        metadata.format = 'epub'
-        metadata.file = self.file
-
-        return metadata
-
-    def get_cover_image(self):
-
-        cover_data = None
-        cover_href = self.get_cover_href(self.get_cover_id())
-        if cover_href is not None:
-            z = ZipFile(self.file)
-            try:
-                cover_data = z.read(self.content_root + cover_href)
-            except KeyError:
-                # Cover image not found
-                pass
-            z.close()
-
-        return cover_data
-
-    def get_cover_id(self):
-
-        cover_id = ''
-        cover_id = self.get('opf:metadata/opf:meta[@name="cover"]/@content')
-        if cover_id is None:
-            cover_id = 'cover.jpg'
-
-        return cover_id
-
-    def get_cover_href(self, cover_id):
-
-        return self.get('opf:manifest/opf:item[@id="{}"]/@href'.format(cover_id))
-
-    def set_metadata(self, metadata):
-
-        meta = self.Element('opf:metadata')
-
-        if metadata.identifier['value']:
-            node = self.SubElement(meta, 'dc:identifier')
-            node.text = metadata.identifier['value']
-            for attr in metadata.identifier['attrib']:
-                node.attrib[attr] = metadata.identifier['attrib'][attr]
-
-        if metadata.title:
-            self.SubElement(meta, 'dc:title').text = metadata.title
-
-        for author in metadata.author:
-            self.add_creator(meta, author, 'aut')
-
-        for translator in metadata.translator:
-            self.add_creator(meta, translator, 'trl')
-
-        for tag in metadata.tag:
-            self.SubElement(meta, 'dc:subject').text = tag
-
-        if metadata.description:
-            self.SubElement(meta, 'dc:description').text = metadata.description
-
-        if metadata.publisher:
-            self.SubElement(meta, 'dc:publisher').text = metadata.publisher
-
-        if metadata.date:
-            self.SubElement(meta, 'dc:date').text = metadata.date
-
-        if metadata.lang:
-            self.SubElement(meta, 'dc:language').text = metadata.lang
-
-        if metadata.series:
-            node = self.SubElement(meta, 'opf:meta')
-            node.attrib['name'] = 'calibre:series'
-            node.attrib['content'] = metadata.series
-
-        if metadata.series_index:
-            node = self.SubElement(meta, 'opf:meta')
-            node.attrib['name'] = 'calibre:series_index'
-            node.attrib['content'] = str(metadata.series_index)
-
-        if metadata.cover_image_data is not None:
-            cover_id = self.get_cover_id()
-            if cover_id is None:
-                cover_id = 'coverimage'
-            self.cover_href = self.get_cover_href(cover_id)
-
-            node = self.SubElement(meta, 'opf:meta')
-            node.attrib['name'] = 'cover'
-            node.attrib['content'] = cover_id
-
-            if self.cover_href is None:
-                self.cover_href = 'cover.jpg'
-            else:
-                cover_name, _ = os.path.splitext(self.cover_href)
-                self.cover_href = cover_name + '.jpg'
-
-            node = self.get('opf:manifest/opf:item[@id="{}"]'.format(cover_id))
-            if node is None:
-                node = self.Element('opf:item')
-                node.attrib['id'] = cover_id
-                manifest_node = self.get('opf:manifest')
-                manifest_node.append(node)
-            node.attrib['href'] = self.cover_href
-            node.attrib['media-type'] = 'image/jpeg'
-            self.cover_image_data = metadata.cover_image_data
-
-            meta_node = self.get('opf:metadata')
-            meta_node.getparent().replace(meta_node, meta)
-            self.save()
-
-    def add_creator(self, parent, name, role):
-
-        node = self.SubElement(parent, 'dc:creator')
-        node.text = name
-        node.attrib[QName(self.ns['opf'], 'role')] = role
-        node.attrib[QName(self.ns['opf'], 'file-as')] = person_sort_name(name, first_delimiter=', ')
-
-    def Element(self, name):
-
+    def _sub_element(self, parent, name):
         ns, tag = name.split(':')
-        return etree.Element(QName(self.ns[ns], tag), nsmap=self.ns)
-
-    def SubElement(self, parent, name):
-
-        ns, tag = name.split(':')
-        return etree.SubElement(parent, QName(self.ns[ns], tag))
-
-    def get(self, name):
-
-        result_list = self.tree.xpath(name, namespaces=self.ns)
-        for r in result_list:
-            return r
-
-    def getall(self, name):
-
-        return self.tree.xpath(name, namespaces=self.ns)
+        return etree.SubElement(parent, etree.QName(ns_map[ns], tag))

@@ -9,6 +9,9 @@ def xstr(string):
         return str(string)
 
 
+def str_to_list(s):
+    return [x.strip() for x in s.split(',')]
+
 def person_sort_name(name, first_delimiter=' '):
 
     n = name.split()
@@ -67,7 +70,7 @@ def replace_keywords(s, m):
     return s
 
 
-def splitext_(path):
+def split_ext(path):
     for ext in ['.fb2.zip']:
         if path.lower().endswith(ext):
             return ext

@@ -1,6 +1,6 @@
 build/
 dist/
-ebookmeta.egg-info/
+*.egg-info/
 *.pyc
 .DS_Store
 test.py

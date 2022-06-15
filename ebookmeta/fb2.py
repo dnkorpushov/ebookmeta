@@ -1,230 +1,202 @@
-from zipfile import ZipInfo
 from lxml import etree
-from lxml.etree import QName
-
 import base64
 from io import BytesIO
 
-from .metadata import Metadata
-from .utils import xstr, person_sort_name
+from .utils import xstr
 from .myzipfile import ZipFile, is_zipfile
 
+ns_map = {
+    'fb': 'http://www.gribuser.ru/xml/fictionbook/2.0',
+    'l': 'http://www.w3.org/1999/xlink'
+}
 
-class Fb2Meta:
-
-    ns = {
-        'fb': 'http://www.gribuser.ru/xml/fictionbook/2.0',
-        'l': 'http://www.w3.org/1999/xlink'
-    }
-
+class Fb2():
     def __init__(self, file):
-
         self.file = file
         self.tree = None
-        self.encoding = ''
-        self.zip_info = ZipInfo()
-
-        self.load()
-
-    def load(self):
+        self.encoding = None
+        self.zip_file_name = None
 
         if is_zipfile(self.file):
-            z = ZipFile(self.file)
-            self.zip_info = z.infolist()[0]
-            fb2_string = z.read(self.zip_info)
-            self.tree = etree.parse(BytesIO(fb2_string), parser=etree.XMLParser(recover=True))
-            z.close()
+            zipfile = ZipFile(self.file)
+            for info in zipfile.infolist():
+                self.zip_file_name = info
+            
+            if self.zip_file_name:
+                content = zipfile.read(self.zip_file_name)
+                self.tree = etree.parse(BytesIO(content), parser=etree.XMLParser(recover=True))
+                self.encoding = self.tree.docinfo.encoding
+                zipfile.close()
         else:
             self.tree = etree.parse(self.file, parser=etree.XMLParser(recover=True))
-        self.encoding = self.tree.docinfo.encoding
+            self.encoding = self.tree.docinfo.encoding
 
-    def save(self):
-
-        if is_zipfile(self.file):
-            z = ZipFile(self.file, mode='w')
-            z.writestr(self.zip_info,
-                       etree.tostring(self.tree, encoding=self.encoding,
-                                      method='xml', xml_declaration=True, pretty_print=True))
-            z.close()
-        else:
-            self.tree.write(self.file, encoding=self.encoding, method='xml', xml_declaration=True, pretty_print=True)
-
-    def get_metadata(self):
-
-        meta = Metadata()
-        meta.title = xstr(self.get('//fb:description/fb:title-info/fb:book-title/text()'))
-        meta.author = self.get_author_list()
-        meta.author_sort = []
-        for author in meta.author:
-            meta.author_sort.append(person_sort_name(author))
-
-        meta.series = self.get_series()
-        meta.series_index = self.get_series_index()
-        meta.tag = self.get_genre_list()
-        meta.translator = self.get_translator_list()
-        meta.lang = xstr(self.get('//fb:description/fb:title-info/fb:lang/text()'))
-        meta.src_lang = xstr(self.get('//fb:description/fb:title-info/fb:src-lang/text()'))
-        meta.date = xstr(self.get('//fb:description/fb:title-info/fb:date/text()'))
-        meta.publisher = xstr(self.get('//fb:description/fb:publish-info/fb:publisher/text()'))
-        meta.description = self.get_description()
-        meta.cover_image_data = self.get_cover_data(self.get_cover_name())
-        meta.identifier = xstr(self.get('//fb:description/fb:document-info/fb:id/text()'))
-        meta.format = 'fb2'
-        meta.file = self.file
-        return meta
-
-    def get_cover_name(self):
-
-        cover_name = self.get('//fb:description/fb:title-info/fb:coverpage/fb:image/@l:href')
-        if cover_name is not None:
-            return cover_name[1:]
-
-        return ''
-
-    def get_cover_data(self, name):
-
-        if name:
-            node = self.get('//fb:binary[@id="{0}"]'.format(name))
-            if node is not None and node.text is not None:
-                return base64.b64decode(node.text.encode('ascii'))
-        return None
-
-    def get_description(self):
-
-        annotation = self.get('//fb:description/fb:title-info/fb:annotation')
-        if annotation is not None:
-            return ''.join(annotation.itertext())
-        return ''
+    ######## Getters ########
+    def get_title(self):
+        return xstr(self._get('//fb:description/fb:title-info/fb:book-title/text()'))
 
     def get_author_list(self):
-
-        node_list = self.getall('//fb:description/fb:title-info/fb:author')
-        author_list = []
+        node_list = self._get_all('//fb:description/fb:title-info/fb:author')
+        result_list = []
         for node in node_list:
-            author = self.get_person(node)
-            author_list.append(author)
-        return author_list
+            person = self._get_person(node)
+            result_list.append(person)
+        return result_list
+    
+    def get_series(self):
+         return xstr(self._get('//fb:description/fb:title-info/fb:sequence/@name'))
+
+    def get_series_index(self):
+        return xstr(self._get('//fb:description/fb:title-info/fb:sequence/@number'))
+
+    def get_lang(self):
+        return xstr(self._get('//fb:description/fb:title-info/fb:lang/text()'))
+    
+    def get_tag_list(self):
+        tag_list = []
+        node_list = self._get_all('//fb:description/fb:title-info/fb:genre')
+        for n in node_list:
+            tag_list.append(n.text)
+        return tag_list
+
+    def get_description(self):
+        content = self._get('//fb:description/fb:title-info/fb:annotation')
+        if content is not None:
+            return ''.join(content.itertext())
 
     def get_translator_list(self):
-
-        node_list = self.getall('//fb:description/fb:title-info/fb:translator')
-        translator_list = []
+        node_list = self._get_all('//fb:description/fb:title-info/fb:translator')
+        result_list = []
         for node in node_list:
-            translator = self.get_person(node)
-            translator_list.append(translator)
-        return translator_list
+            person = self._get_person(node)
+            result_list.append(person)
+        return result_list
 
-    def get_person(self, node):
+    def get_format(self):
+        return 'fb2'
+    
+    def get_format_version(self):
+        return '2.0'
 
+    def get_identifier(self):
+        return xstr(self._get('//fb:description/fb:document-info/fb:id/text()'))
+
+    def get_cover_data(self):
+        media_type = None
+        href = None
+        data = None
+
+        href = self._get('//fb:description/fb:title-info/fb:coverpage/fb:image/@l:href')
+        if href:
+            href = href[1:] # Crop # symbol
+            node = self._get('//fb:binary[@id="{0}"]'.format(href))
+            if node is not None:
+                if 'content-type' in node.attrib:
+                    media_type = node.attrib['content-type']
+                    data = base64.b64decode(node.text.encode('ascii'))
+        return (href, media_type, data)
+
+    ######## Setters ########
+    def set_title(self, title):
+        node = self._get('//fb:description/fb:title-info/fb:book-title')
+        if node is None:
+            parent = self._get('//fb:description/fb:title-info')
+            node = self._sub_element(parent, 'fb:book-title')
+        node.text = title
+
+    def set_author_list(self, author_list):
+        node_list = self._get_all('//fb:description/fb:title-info/fb:author')
+        print(node_list)
+        for node in node_list: node.getparent().remove(node)
+        parent = self._get('//fb:description/fb:title-info')
+        for author in author_list:
+            node = self._sub_element(parent, 'fb:author')
+            self._set_person(node, author)
+       
+    def set_series(self, series):
+        node = self._get('//fb:description/fb:title-info/fb:sequence')
+        if node is None:
+            parent = self._get('//fb:description/fb:title-info')
+            node = self._sub_element(parent, 'fb:sequence')
+        node.attrib['name'] = series
+
+    def set_series_index(self, series_index):
+        node = self._get('//fb:description/fb:title-info/fb:sequence')
+        if node is None:
+            parent = self._get('//fb:description/fb:title-info')
+            node = self._sub_element(parent, 'fb:sequence')
+        node.attrib['number'] = str(series_index)
+
+    def set_lang(self, lang):
+        node = self._get('//fb:description/fb:title-info/fb:lang')
+        if node is None:
+            parent = self._get('//fb:description/fb:title-info')
+            node = self._sub_element(parent, 'fb:lang')
+        node.text = lang
+
+    def set_tag_list(self, tag_list):
+        node_list = self._get_all('//fb:description/fb:title-info/fb:genre')
+        for node in node_list: node.getparent().remove(node)
+        parent = self._get('//fb:description/fb:title-info')
+        for tag in tag_list:
+            node = self._sub_element(parent, 'fb:genre')
+            node.text = tag
+
+    def set_translator_list(self, translator_list):
+        node_list = self._get_all('//fb:description/fb:title-info/fb:translator')
+        for node in node_list: node.getparent().remove(node)
+        parent = self._get('//fb:description/fb:title-info')
+        for translator in translator_list:
+            node = self._sub_element(parent, 'fb:translator')
+            self._set_person(node, translator)
+
+    def set_cover_data(self, href, media_type, data):
+        old_href = self._get('//fb:description/fb:title-info/fb:coverpage/fb:image/@l:href')
+        if old_href:
+            href = old_href[1:] # Crop # symbol
+        else:
+            parent = self._get('//fb:description/fb:title-info')
+            node = self._sub_element(parent, 'fb:coverpage')
+            image_node = self._sub_element(node, 'fb:image')
+            image_node.attrib[etree.QName('http://www.w3.org/1999/xlink', 'href')] = '#{}'.format(href)
+
+        node = self._get('//fb:binary[@id="{0}"]'.format(href))
+        if node is None:
+            node = self._sub_element(self.tree.getroot(), 'fb:binary')
+            node.attrib['id'] = href
+            node.attrib['content-type'] = media_type
+        
+        node.text = base64.encodebytes(data)
+
+    ######## Service methods ########
+    def save(self):
+        if is_zipfile(self.file):
+            zipfile = ZipFile(self.file, mode='w')
+            zipfile.writestr(self.zip_file_name,
+                       etree.tostring(self.tree, encoding=self.encoding,
+                                      method='xml', xml_declaration=True, pretty_print=True))
+            zipfile.close()
+        else:
+            self.tree.write(self.file, encoding=self.encoding, method='xml', 
+                            xml_declaration=True, pretty_print=True)
+
+    def _get_person(self, node):
         first_name = ''
         middle_name = ''
         last_name = ''
 
         for e in node:
-            if QName(e).localname == 'first-name':
+            if etree.QName(e).localname == 'first-name':
                 first_name = xstr(e.text)
-            elif QName(e).localname == 'middle-name':
+            elif etree.QName(e).localname == 'middle-name':
                 middle_name = xstr(e.text)
-            elif QName(e).localname == 'last-name':
+            elif etree.QName(e).localname == 'last-name':
                 last_name = xstr(e.text)
 
-        author = '{} {} {}'.format(first_name, middle_name, last_name)
+        author = '{0} {1} {2}'.format(first_name, middle_name, last_name)
         return ' '.join(author.split())
 
-    def get_genre_list(self):
-
-        genre_list = []
-        node_list = self.getall('//fb:description/fb:title-info/fb:genre')
-        for n in node_list:
-            genre_list.append(n.text)
-        return genre_list
-
-    def get_series(self):
-
-        return xstr(self.get('//fb:description/fb:title-info/fb:sequence/@name'))
-
-    def get_series_index(self):
-
-        index = ''
-        index = xstr(self.get('//fb:description/fb:title-info/fb:sequence/@number'))
-        return index
-
-    def get(self, xpath):
-
-        result_list = self.tree.xpath(xpath, namespaces=self.ns)
-        for n in result_list:
-            return n
-
-    def getall(self, xpath):
-
-        return self.tree.xpath(xpath, namespaces=self.ns)
-
-    def set_metadata(self, metadata):
-
-        # Generate new title-info for fb2
-        title_info = etree.Element('title-info', nsmap=self.ns)
-        etree.SubElement(title_info, 'book-title', nsmap=self.ns).text = metadata.title
-
-        for author in metadata.author:
-            node = self.create_person_node('author', author)
-            title_info.append(node)
-
-        for tag in metadata.tag:
-            etree.SubElement(title_info, 'genre', nsmap=self.ns).text = tag
-
-        if metadata.series:
-            series_node = etree.SubElement(title_info, 'sequence', nsmap=self.ns)
-            series_node.attrib['name'] = metadata.series
-            if metadata.series_index:
-                series_node.attrib['number'] = str(metadata.series_index)
-
-        if metadata.description:
-            node = etree.SubElement(title_info, 'annotation', nsmap=self.ns)
-            etree.SubElement(node, 'p', nsmap=self.ns).text = metadata.description
-
-        if metadata.date:
-            etree.SubElement(title_info, 'date', nsmap=self.ns).text = metadata.date
-
-        if metadata.lang:
-            etree.SubElement(title_info, 'lang', nsmap=self.ns).text = metadata.lang
-
-        if metadata.src_lang:
-            etree.SubElement(title_info, 'src-lang', nsmap=self.ns).text = metadata.src_lang
-
-        for translator in metadata.translator:
-            node = self.create_person_node('translator', translator)
-            title_info.append(node)
-
-        if metadata.cover_image_data:
-            cover_name = self.get_cover_name()
-            if not cover_name:
-                cover_name = 'cover.jpg'
-
-            node = etree.SubElement(title_info, 'coverpage', nsmap=self.ns)
-            image_node = etree.SubElement(node, 'image', nsmap=self.ns)
-            image_node.attrib[QName('http://www.w3.org/1999/xlink', 'href')] = '#{}'.format(cover_name)
-
-            node = self.get('//fb:binary[@id="{0}"]'.format(cover_name))
-            if node is None:
-                node = etree.SubElement(self.tree.getroot(), 'binary', nsmap=self.ns)
-            node.attrib['id'] = cover_name
-            node.attrib['content-type'] = 'image/jpeg'
-            node.text = base64.encodebytes(metadata.cover_image_data)
-        else:
-            # Cover cleared - delete cover image if exist
-            cover_name = self.get_cover_name()
-            if cover_name is not None:
-                node = self.get('//fb:binary[@id="{0}"]'.format(cover_name))
-                if node is not None:
-                    node.getparent().remove(node)
-
-        # replace original title-info
-        title_node = self.get('//fb:description/fb:title-info')
-        title_node.getparent().replace(title_node, title_info)
-
-        self.save()
-
-    def create_person_node(self, node_name, person):
+    def _set_person(self, node, person):
 
         first_name = ''
         middle_name = ''
@@ -240,13 +212,23 @@ class Fb2Meta:
             last_name = person_parts[1]
         else:
             last_name = person
-
-        node = etree.Element(node_name, nsmap=self.ns)
+    
         if first_name:
-            etree.SubElement(node, 'first-name', nsmap=self.ns).text = first_name.strip()
+            self._sub_element(node, 'fb:first-name').text = first_name.strip()
         if middle_name:
-            etree.SubElement(node, 'middle-name', nsmap=self.ns).text = middle_name.strip()
+            self._sub_element(node, 'fb:middle-name').text = middle_name.strip()
         if last_name:
-            etree.SubElement(node, 'last-name', nsmap=self.ns).text = last_name.strip()
+            self._sub_element(node, 'fb:last-name').text = last_name.strip()
 
-        return node
+
+    def _get(self, xpath):
+        node_list = self.tree.xpath(xpath, namespaces=ns_map)
+        for node in node_list:
+            return node
+
+    def _get_all(self, xpath):
+        return self.tree.xpath(xpath, namespaces=ns_map)
+
+    def _sub_element(self, parent, name):
+        ns, tag = name.split(':')
+        return etree.SubElement(parent, etree.QName(ns_map[ns], tag))
