@@ -139,7 +139,7 @@ class Epub2():
 
     def set_author_list(self, author_list):
         node_list = self._get_all('opf:metadata/dc:creator[@opf:role="aut" or not(@opf:role)]')
-        for node in node_list: node.parent().delete(node)
+        for node in node_list: node.parent().remove(node)
         meta_node = self._get('opf:metadata')
         for author in author_list:
             node = self._sub_element(meta_node, 'dc:creator')
@@ -148,19 +148,27 @@ class Epub2():
 
     def set_series(self, series):
         node = self._get('opf:metadata/opf:meta[@name="calibre:series"]')
-        if node is None:
-            meta_node = self._get('opf:metadata')
-            node = self._sub_element(meta_node, 'opf:meta')
-            node.attrib['name'] = 'calibre:series'
-        node.attrib['content'] = series
+        if series:
+            if node is None:
+                meta_node = self._get('opf:metadata')
+                node = self._sub_element(meta_node, 'opf:meta')
+                node.attrib['name'] = 'calibre:series'
+            node.attrib['content'] = series
+        else:
+            if node is not None:
+                node.getparent().remove(node)
     
     def set_series_index(self, series_index):
         node = self._get('opf:metadata/opf:meta[@name="calibre:series_index"]')
-        if node is None:
-            meta_node = self._get('opf:metadata')
-            node = self._sub_element(meta_node, 'opf:meta')
-            node.attrib['name'] = 'calibre:series_index'
-        node.attrib['content'] = str(series_index)
+        if series_index:
+            if node is None:
+                meta_node = self._get('opf:metadata')
+                node = self._sub_element(meta_node, 'opf:meta')
+                node.attrib['name'] = 'calibre:series_index'
+            node.attrib['content'] = str(series_index)
+        else:
+            if node is not None:
+                node.getparent().remove(node)
 
     def set_lang(self, lang):
         node = self._get('opf:metadata/dc:language')
@@ -171,7 +179,7 @@ class Epub2():
 
     def set_tag_list(self, tag_list):
         node_list = self._get_all('opf:metadata/dc:subject')
-        for node in node_list: node.getparent().delete(node)
+        for node in node_list: node.getparent().remove(node)
         meta_node = self._get('opf:metadata')
         for tag in tag_list:
             node = self._sub_element(meta_node, 'dc:subject')
@@ -180,7 +188,7 @@ class Epub2():
 
     def set_translator_list(self, translator_list):
         node_list = self._get_all('opf:metadata/dc:creator[@opf:role="trl"]')
-        for node in node_list: node.parent().delete(node)
+        for node in node_list: node.getparent().remove(node)
         meta_node = self._get('opf:metadata')
         for translator in translator_list:
             node = self._sub_element(meta_node, 'dc:creator')

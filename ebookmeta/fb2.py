@@ -106,7 +106,6 @@ class Fb2():
 
     def set_author_list(self, author_list):
         node_list = self._get_all('//fb:description/fb:title-info/fb:author')
-        print(node_list)
         for node in node_list: node.getparent().remove(node)
         parent = self._get('//fb:description/fb:title-info')
         for author in author_list:
@@ -115,17 +114,25 @@ class Fb2():
        
     def set_series(self, series):
         node = self._get('//fb:description/fb:title-info/fb:sequence')
-        if node is None:
-            parent = self._get('//fb:description/fb:title-info')
-            node = self._sub_element(parent, 'fb:sequence')
-        node.attrib['name'] = series
+        if series:
+            if node is None:
+                parent = self._get('//fb:description/fb:title-info')
+                node = self._sub_element(parent, 'fb:sequence')
+            node.attrib['name'] = series
+        else:
+            if node is not None:
+                node.getparent().remove(node)
 
     def set_series_index(self, series_index):
         node = self._get('//fb:description/fb:title-info/fb:sequence')
-        if node is None:
-            parent = self._get('//fb:description/fb:title-info')
-            node = self._sub_element(parent, 'fb:sequence')
-        node.attrib['number'] = str(series_index)
+        if series_index:
+            if node is None:
+                parent = self._get('//fb:description/fb:title-info')
+                node = self._sub_element(parent, 'fb:sequence')
+            node.attrib['number'] = str(series_index)
+        else:
+            if node is not None:
+                node.getparent().remove(node)
 
     def set_lang(self, lang):
         node = self._get('//fb:description/fb:title-info/fb:lang')
