@@ -85,14 +85,14 @@ class Metadata:
                     d['#translator'] = ''
 
 
-            file_ext = split_ext(self.file)
-            result = replace_keywords(filename_pattern, d).strip() + file_ext 
+        file_ext = split_ext(self.file)
+        result = replace_keywords(filename_pattern, d).strip() + file_ext 
  
         return normalize_path(result)
 
 
     def _get_authors_by_pattern(self, pattern, short=True):
-        if len(self.authors) == 0:
+        if len(self.author_list) == 0:
             return ''
 
         if short and len(self.author_list) > 1:
