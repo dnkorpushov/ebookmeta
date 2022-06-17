@@ -11,7 +11,7 @@ When changing the cover, the library does not check whether the image byte array
 
 There is a limitation for epub files: you can't add cover if it doesn't exist in file. You can only replace an existing cover.
 
-This library used in my other project [Libro2](https://github.com/dnkorpushov/libro2).
+This library used in my other project [Libro2](https://github.com/dnkorpushov/libro2) - GUI tool for editing metadata, rename and convert to other formats for ebook files.
 
 P.S. 
 Sorry for my English
