@@ -68,10 +68,13 @@ ebookmeta.set_metadata('test.epub', meta)  # Set epub metadata from Metadata cla
 * get_filename_by_pattern - returns the file name generated based on the metadata according to the given template
 
 
-### Installation
-#### Using pip
+### Get filename by pattern
+    Metadata class has get_filename_by_pattern method for generate new filename by pattern based on source file metadata.
+
+## Installation
+### Using pip
 ```pip3 install ebookmeta```
-#### From source
+### From source
 ```python3 setup.py install```
 ### Requirements
 * lxml
