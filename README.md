@@ -1,6 +1,6 @@
 # ebookmeta
 
-Ebookmeta is a Python library for managing epub2, epub3 andfb2 files metadata
+Ebookmeta is a Python library for managing epub2, epub3 and fb2 files metadata.
 
 Library allows you to read and write some of the metadata fields of epub2, epub3 and fb2 files.
 
