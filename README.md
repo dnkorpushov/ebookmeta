@@ -67,3 +67,13 @@ ebookmeta.set_metadata('test.epub', meta)  # Set epub metadata from Metadata cla
 * set_tag_list_from_string - sets tags list from comma-separated string
 * get_filename_by_pattern - returns the file name generated based on the metadata according to the given template
 
+
+### Installation
+#### Using pip
+```pip3 install ebookmeta```
+#### From source
+```python3 setup.py install```
+### Requirements
+* lxml
+
+
