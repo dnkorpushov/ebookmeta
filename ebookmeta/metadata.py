@@ -78,9 +78,9 @@ class Metadata:
                 d['#number'] = str(self.series_index)
                 d['#padnumber'] = str(self.series_index).strip().zfill(padnum)
 
-            if len(self.translator) > 0:
+            if len(self.translator_list) > 0:
                 try:
-                    d['#translator'] = self.translator[0].split()[-1]
+                    d['#translator'] = self.translator_list[0].split()[-1]
                 except:
                     d['#translator'] = ''
 
