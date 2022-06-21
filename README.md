@@ -110,7 +110,8 @@ Possible filename pattern variables:
 - #number - book series index
 - #padnumber padding left book series index
 - #translator' - last name of first book translator
-- #bookid - book unique identifier.
+- #bookid - book unique identifier
+- #md5 - md5 checksum for source file 
 
 Possible author name pattern variables:
 - #f - author first name. Для русского языка - имя автора.
