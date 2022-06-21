@@ -1,4 +1,5 @@
 from lxml import etree
+import hashlib
 
 from .fb2genres import fb2genres
 from .exceptions import BadLanguage
@@ -60,7 +61,7 @@ class Metadata:
         d = { '#title': '', '#series': '', '#abbrseries': '',
               '#ABBRseries': '', '#number': '', '#padnumber': '',
               '#author': '', '#authors': '', '#translator': '',
-              '#bookid': ''
+              '#bookid': '', '#md5': ''
             }
 
         d['#title'] = self.title
@@ -84,6 +85,10 @@ class Metadata:
                 except:
                     d['#translator'] = ''
 
+        with open(self.file, 'rb') as f:
+            data = f.read()
+            d['#md5'] = hashlib.md5(data).hexdigest()
+            print(d['#md5'])
 
         file_ext = split_ext(self.file)
         result = replace_keywords(filename_pattern, d).strip() + file_ext 
