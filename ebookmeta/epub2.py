@@ -28,6 +28,8 @@ class Epub2():
         tree = etree.fromstring(content)
         self.opf = tree.xpath('n:rootfiles/n:rootfile/@full-path', namespaces=ns_map)[0]
         self.content_root = os.path.dirname(self.opf) + '/'
+        if self.content_root == '/':
+            self.content_root = ''
         content = self._get_file_content(self.opf)
         self.tree = etree.fromstring(content)
         self.version = self.tree.xpath('/opf:package/@version', namespaces=ns_map)[0]
@@ -64,7 +66,7 @@ class Epub2():
     def get_tag_list(self):
         result = []
         node_list = self._get_all('opf:metadata/dc:subject')
-        for node in node_list: result.append(node.text)
+        for node in node_list: result.append(xstr(node.text))
         return result
 
     def get_description(self):

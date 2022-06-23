@@ -56,7 +56,7 @@ class Fb2():
         tag_list = []
         node_list = self._get_all('//fb:description/fb:title-info/fb:genre')
         for n in node_list:
-            tag_list.append(n.text)
+            tag_list.append(xstr(n.text))
         return tag_list
 
     def get_description(self):
