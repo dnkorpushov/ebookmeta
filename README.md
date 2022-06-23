@@ -66,6 +66,15 @@ ebookmeta.set_metadata('test.epub', meta)  # Set epub metadata from Metadata cla
 * cover_file_name - stored file name
 * file - source file name
 
+#### Additional attributes for fb2 
+* publish_info.title - published book title
+* publish_info.publisher - original book bublisher
+* publish_info.city - city where original book was published
+* publish_info.year - year of publication book
+* publish_info.isbn - International Standard Book Number (ISBN)
+* publish_info.series - original book sereis
+* publish_info.seires_index - original book series index
+
 ### Methods 
 * author_list_to_string - return authors list as comma-separated string
 * translator_list_to_string - return translators list as comma-separated string
