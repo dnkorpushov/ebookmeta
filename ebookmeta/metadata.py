@@ -5,6 +5,22 @@ from .fb2genres import fb2genres
 from .exceptions import BadLanguage
 from .utils import str_to_list, replace_keywords, split_ext, normalize_path
 
+class PublishInfo:
+    def __init__(self):
+        self.title = None
+        self.publisher = None
+        self.year = None
+        self.city = None
+        self.series = None
+        self.series_index = None
+        self.isbn = None
+
+    def __str__(self):
+        result = []
+        for key in self.__dict__.keys():
+                result.append('{0}: {1}'.format(key, self.__dict__[key]))
+
+        return '[' + ', '.join(result) + ']'
 
 class Metadata:
     def __init__(self):
@@ -24,6 +40,7 @@ class Metadata:
         self.cover_file_name = None
         self.cover_media_type = None
         self.file = None
+        self.publish_info = PublishInfo()
 
     def author_list_to_string(self):
         return ', '.join(self.author_list) if self.author_list else []
@@ -58,37 +75,41 @@ class Metadata:
         self.tag_list = str_to_list(s)
 
     def get_filename_by_pattern(self, filename_pattern, author_pattern, padnum=2):
-        d = { '#title': '', '#series': '', '#abbrseries': '',
-              '#ABBRseries': '', '#number': '', '#padnumber': '',
-              '#author': '', '#authors': '', '#translator': '',
-              '#bookid': '', '#md5': ''
+        d = { '#Title': '', '#Series': '', '#Abbrseries': '',
+              '#Number': '', '#Padnumber': '',
+              '#Author': '', '#Authors': '', '#Translator': '',
+              '#Bookid': '', '#Md5': ''
             }
 
-        d['#title'] = self.title
-        d['#author'] = self._get_authors_by_pattern(author_pattern, short=True)
-        d['#authors'] = self._get_authors_by_pattern(author_pattern, short=False)
-        d['#bookid'] = self.identifier
+        d['#Title'] = self.title
+        d['#Author'] = self._get_authors_by_pattern(author_pattern, short=True)
+        d['#Authors'] = self._get_authors_by_pattern(author_pattern, short=False)
+        d['#Bookid'] = self.identifier
 
         if self.series:
-            d['#series'] = self.series
+            d['#Series'] = self.series
             abbr = ''.join(w[0] for w in self.series.split())
-            d['#abbrseries'] = abbr.lower()
-            d['#ABBRseries'] = abbr.upper()
+            d['#Abbrseries'] = abbr
 
             if self.series_index:
-                d['#number'] = str(self.series_index)
-                d['#padnumber'] = str(self.series_index).strip().zfill(padnum)
+                d['#Number'] = str(self.series_index)
+                d['#Padnumber'] = str(self.series_index).strip().zfill(padnum)
 
             if len(self.translator_list) > 0:
                 try:
-                    d['#translator'] = self.translator_list[0].split()[-1]
+                    d['#Translator'] = self.translator_list[0].split()[-1]
                 except:
-                    d['#translator'] = ''
+                    d['#Translator'] = ''
 
         with open(self.file, 'rb') as f:
             data = f.read()
-            d['#md5'] = hashlib.md5(data).hexdigest()
-            print(d['#md5'])
+            d['#Md5'] = hashlib.md5(data).hexdigest()
+
+        cases_d = {}
+        for key, value in d.items():
+            cases_d[key.lower()] = value.lower()
+            cases_d[key.upper()] = value.upper()
+        d.update(cases_d)
 
         file_ext = split_ext(self.file)
         result = replace_keywords(filename_pattern, d).strip() + file_ext 

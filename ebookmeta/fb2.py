@@ -96,6 +96,28 @@ class Fb2():
                     data = base64.b64decode(node.text.encode('ascii'))
         return (href, media_type, data)
 
+    def get_publish_title(self):
+        return xstr(self._get('//fb:description/fb:publish-info/fb:book-name/text()'))
+
+    def get_publish_publisher(self):
+        return xstr(self._get('//fb:description/fb:publish-info/fb:publisher/text()'))
+    
+    def get_publish_year(self):
+        return xstr(self._get('//fb:description/fb:publish-info/fb:year/text()'))
+
+    def get_publish_city(self):
+        return xstr(self._get('//fb:description/fb:publish-info/fb:city/text()'))
+    
+    def get_publish_isbn(self):
+        return xstr(self._get('//fb:description/fb:publish-info/fb:isbn/text()'))
+
+    def get_publish_series(self):
+         return xstr(self._get('//fb:description/fb:publish-info/fb:sequence/@name'))
+
+    def get_publish_series_index(self):
+        return xstr(self._get('//fb:description/fb:publish-info/fb:sequence/@number'))
+    
+
     ######## Setters ########
     def set_title(self, title):
         node = self._get('//fb:description/fb:title-info/fb:book-title')
@@ -174,6 +196,63 @@ class Fb2():
             node.attrib['content-type'] = media_type
         
         node.text = base64.encodebytes(data)
+
+    def set_publish_title(self, title):
+        node = self._get('//fb:description/fb:publish-info/fb:book-name')
+        if node is None:
+            parent = self._get('//fb:description/fb:publish-info')
+            node = self._sub_element(parent, 'fb:book-name')
+        node.text = title
+
+    def set_publish_publisher(self, publisher):
+        node = self._get('//fb:description/fb:publish-info/fb:publisher')
+        if node is None:
+            parent = self._get('//fb:description/fb:publish-info')
+            node = self._sub_element(parent, 'fb:publisher')
+        node.text = publisher
+
+    def set_publish_year(self, year):
+        node = self._get('//fb:description/fb:publish-info/fb:year')
+        if node is None:
+            parent = self._get('//fb:description/fb:publish-info')
+            node = self._sub_element(parent, 'fb:year')
+        node.text = year
+
+    def set_publish_city(self, city):
+        node = self._get('//fb:description/fb:publish-info/fb:city')
+        if node is None:
+            parent = self._get('//fb:description/fb:publish-info')
+            node = self._sub_element(parent, 'fb:city')
+        node.text = city    
+
+    def set_publish_isbn(self, isbn):
+        node = self._get('//fb:description/fb:publish-info/fb:isbn')
+        if node is None:
+            parent = self._get('//fb:description/fb:publish-info')
+            node = self._sub_element(parent, 'fb:isbn')
+        node.text = isbn
+
+    def set_publish_series(self, series):
+        node = self._get('//fb:description/fb:publish-info/fb:sequence')
+        if series:
+            if node is None:
+                parent = self._get('//fb:description/fb:publish-info')
+                node = self._sub_element(parent, 'fb:sequence')
+            node.attrib['name'] = series
+        else:
+            if node is not None:
+                node.getparent().remove(node)
+
+    def set_publish_series_index(self, series_index):
+        node = self._get('//fb:description/fb:publish-info/fb:sequence')
+        if series_index:
+            if node is None:
+                parent = self._get('//fb:description/fb:publish-info')
+                node = self._sub_element(parent, 'fb:sequence')
+            node.attrib['number'] = str(series_index)
+        else:
+            if node is not None:
+                node.getparent().remove(node)
 
     ######## Service methods ########
     def save(self):

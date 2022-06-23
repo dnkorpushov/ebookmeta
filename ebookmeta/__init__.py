@@ -40,6 +40,16 @@ def get_metadata(file):
     meta.format = ebook.get_format()
     meta.format_version = ebook.get_format_version()
     meta.file = file
+
+    # Get publish info for FB2
+    if meta.format == 'fb2':
+        meta.publish_info.title = ebook.get_publish_title()
+        meta.publish_info.publisher = ebook.get_publish_publisher()
+        meta.publish_info.city = ebook.get_publish_city()
+        meta.publish_info.year = ebook.get_publish_year()
+        meta.publish_info.series = ebook.get_publish_series()
+        meta.publish_info.series_index = ebook.get_publish_series_index()
+        meta.publish_info.isbn = ebook.get_publish_isbn()
    
     return meta
 
@@ -53,7 +63,16 @@ def set_metadata(file, meta):
     ebook.set_lang(meta.lang)
     ebook.set_translator_list(meta.translator_list)
     ebook.set_cover_data(meta.cover_file_name, meta.cover_media_type, meta.cover_image_data)
+
+    # Set publish info for FB2
+    if meta.format == 'fb2':
+        ebook.set_publish_title(meta.publish_info.title)
+        ebook.set_publish_publisher(meta.publish_info.publisher)
+        ebook.set_publish_city(meta.publish_info.city) 
+        ebook.set_publish_year(meta.publish_info.year)
+        ebook.set_publish_series(meta.publish_info.series)
+        ebook.set_publish_series_index(meta.publish_info.series_index)
+        ebook.set_publish_isbn(meta.publish_info.isbn)
+   
     ebook.save()
-
-
 
