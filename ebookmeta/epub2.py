@@ -1,4 +1,5 @@
 import os
+import posixpath
 import tempfile
 import shutil
 from lxml import etree, html
@@ -109,26 +110,40 @@ class Epub2():
     def _get_cover_from_first_element(self):
         media_type = None
         href = None
+        img_href = None
         data = None
 
-        node = self._get('opf:mainfest/opf:item')
-        if node is not node:
+        node = self._get('opf:manifest/opf:item')
+        if node is not None:
             if 'media-type' in node.attrib: media_type = node.attrib['media-type']
         if media_type == 'application/xhtml+xml':
-            href = media_type['href'] 
+            href = node.attrib['href'] 
             if href:
                 content = self._get_file_content(self.content_root + href)
                 tree = html.fromstring(content)
                 nodes = tree.xpath('//img')
                 for node in nodes:
                     if 'src' in node.attrib:
-                        href = node.attrib['src']
-                        if href.lower().endswith(('.jpg', '.jpeg')): media_type = 'image/jpeg'
-                        elif href.lower().endswith(('.png')): media_type = 'image/png'
+                        img_href = node.attrib['src']
+                        if img_href.lower().endswith(('.jpg', '.jpeg')): media_type = 'image/jpeg'
+                        elif img_href.lower().endswith(('.png')): media_type = 'image/png'
                         else: media_type = None
-                        if media_type:
-                            data = self._get_file_content(self.content_root + href)
-                            return (href, media_type, data)
+                        break
+                if not img_href:
+                    nodes = tree.xpath('//image')
+                    for node in nodes:
+                        if 'xlink:href' in node.attrib:
+                            img_href = node.attrib['xlink:href']
+                            if img_href.lower().endswith(('.jpg', '.jpeg')): media_type = 'image/jpeg'
+                            elif img_href.lower().endswith(('.png')): media_type = 'image/png'
+                            else: media_type = None
+                            break
+
+                if media_type and img_href:
+                    base_path = posixpath.join(self.content_root, os.path.dirname(href))
+                    img_path = posixpath.normpath(posixpath.join(base_path, img_href))
+                    data = self._get_file_content(img_path)
+                    return (img_path, media_type, data)
         return (None, None, None)
 
     ########## Setters ##########
