@@ -61,6 +61,7 @@ def set_metadata(file, meta):
     ebook.set_series(meta.series)
     ebook.set_series_index(meta.series_index)
     ebook.set_lang(meta.lang)
+    ebook.set_tag_list(meta.tag_list)
     ebook.set_translator_list(meta.translator_list)
     ebook.set_cover_data(meta.cover_file_name, meta.cover_media_type, meta.cover_image_data)
 
