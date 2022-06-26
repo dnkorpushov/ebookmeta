@@ -15,15 +15,17 @@ class Fb2():
         self.file = file
         self.tree = None
         self.encoding = None
-        self.zip_file_name = None
+        self.zip_file_info = None
 
         if is_zipfile(self.file):
             zipfile = ZipFile(self.file)
             for info in zipfile.infolist():
-                self.zip_file_name = info
+                if info.filename.lower().endswith('.fb2'):
+                    self.zip_file_info = info
+                    break
             
-            if self.zip_file_name:
-                content = zipfile.read(self.zip_file_name)
+            if self.zip_file_info:
+                content = zipfile.read(self.zip_file_info)
                 self.tree = etree.parse(BytesIO(content), parser=etree.XMLParser(recover=True))
                 self.encoding = self.tree.docinfo.encoding
                 zipfile.close()
@@ -258,7 +260,7 @@ class Fb2():
     def save(self):
         if is_zipfile(self.file):
             zipfile = ZipFile(self.file, mode='w')
-            zipfile.writestr(self.zip_file_name,
+            zipfile.writestr(self.zip_file_info,
                        etree.tostring(self.tree, encoding=self.encoding,
                                       method='xml', xml_declaration=True, pretty_print=True))
             zipfile.close()

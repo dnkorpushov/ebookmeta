@@ -30,6 +30,8 @@ class Epub3(Epub2):
             if 'media-type' in node.attrib: media_type = node.attrib['media-type']
             if 'href'in node.attrib: href = node.attrib['href']
             if href: data = self._get_file_content(self.content_root + href)
+        else:
+            return super().get_cover_data()
         return (href, media_type, data)
 
     ####### Setters (override) #######

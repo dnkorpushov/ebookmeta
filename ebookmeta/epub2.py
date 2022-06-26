@@ -113,10 +113,15 @@ class Epub2():
         img_href = None
         data = None
 
-        node = self._get('opf:manifest/opf:item')
-        if node is not None:
-            if 'media-type' in node.attrib: media_type = node.attrib['media-type']
-        if media_type == 'application/xhtml+xml':
+        nodes = self._get_all('opf:manifest/opf:item')
+        for node in nodes:
+            if node is not None:
+                if 'media-type' in node.attrib: 
+                    if node.attrib['media-type'] == 'application/xhtml+xml':
+                        media_type = node.attrib['media-type']
+                        break
+
+        if media_type:
             href = node.attrib['href'] 
             if href:
                 content = self._get_file_content(self.content_root + href)
