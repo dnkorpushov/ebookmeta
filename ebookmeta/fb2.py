@@ -95,7 +95,12 @@ class Fb2():
             if node is not None:
                 if 'content-type' in node.attrib:
                     media_type = node.attrib['content-type']
-                    data = base64.b64decode(node.text.encode('ascii'))
+                else:
+                    if href.lower().endswith(('.jpeg', '.jpg')):
+                        media_type = 'image/jpeg'
+                    elif href.lower().endswith('.png'):
+                        media_type = 'image/png'
+                data = base64.b64decode(node.text.encode('ascii'))
         return (href, media_type, data)
 
     def get_publish_title(self):
