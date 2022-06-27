@@ -3,6 +3,7 @@ from .exceptions import BadFormat, UnknownFormatException
 from .fb2 import Fb2
 from .epub2 import Epub2
 from .epub3 import Epub3
+from .utils import get_file_creation_time, get_file_modified_time
 
 __all__ = ['get_metadata', 'set_metadata', 'Metadata', 'get_filename_from_pattern']
 
@@ -40,6 +41,8 @@ def get_metadata(file):
     meta.format = ebook.get_format()
     meta.format_version = ebook.get_format_version()
     meta.file = file
+    meta.file_created = get_file_creation_time(file)
+    meta.file_modified = get_file_modified_time(file)
 
     # Get publish info for FB2
     if meta.format == 'fb2':

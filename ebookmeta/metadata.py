@@ -41,6 +41,8 @@ class Metadata:
         self.cover_media_type = None
         self.file = None
         self.publish_info = PublishInfo()
+        self.file_created = None
+        self.file_modified = None
 
     def author_list_to_string(self):
         return ', '.join(self.author_list) if self.author_list else []

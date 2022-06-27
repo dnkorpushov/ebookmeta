@@ -133,8 +133,9 @@ class Fb2():
         for node in node_list: node.getparent().remove(node)
         parent = self._get('//fb:description/fb:title-info')
         for author in author_list:
-            node = self._sub_element(parent, 'fb:author')
-            self._set_person(node, author)
+            if author:
+                node = self._sub_element(parent, 'fb:author')
+                self._set_person(node, author)
        
     def set_series(self, series):
         node = self._get('//fb:description/fb:title-info/fb:sequence')
@@ -170,16 +171,18 @@ class Fb2():
         for node in node_list: node.getparent().remove(node)
         parent = self._get('//fb:description/fb:title-info')
         for tag in tag_list:
-            node = self._sub_element(parent, 'fb:genre')
-            node.text = tag
+            if tag:
+                node = self._sub_element(parent, 'fb:genre')
+                node.text = tag
 
     def set_translator_list(self, translator_list):
         node_list = self._get_all('//fb:description/fb:title-info/fb:translator')
         for node in node_list: node.getparent().remove(node)
         parent = self._get('//fb:description/fb:title-info')
         for translator in translator_list:
-            node = self._sub_element(parent, 'fb:translator')
-            self._set_person(node, translator)
+            if translator:
+                node = self._sub_element(parent, 'fb:translator')
+                self._set_person(node, translator)
 
     def set_cover_data(self, href, media_type, data):
         old_href = self._get('//fb:description/fb:title-info/fb:coverpage/fb:image/@l:href')
@@ -203,42 +206,75 @@ class Fb2():
         node = self._get('//fb:description/fb:publish-info/fb:book-name')
         if node is None:
             parent = self._get('//fb:description/fb:publish-info')
+            if parent is None:
+                descr_node = self._get('//fb:description')
+                parent = self._sub_element(descr_node, 'fb:publish-info')
             node = self._sub_element(parent, 'fb:book-name')
-        node.text = title
+        if title:
+            node.text = title
+        else:
+            node.getparent().remove(node)
 
     def set_publish_publisher(self, publisher):
         node = self._get('//fb:description/fb:publish-info/fb:publisher')
         if node is None:
             parent = self._get('//fb:description/fb:publish-info')
+            if parent is None:
+                descr_node = self._get('//fb:description')
+                parent = self._sub_element(descr_node, 'fb:publish-info')
             node = self._sub_element(parent, 'fb:publisher')
-        node.text = publisher
+        if publisher:
+            node.text = publisher
+        else:
+            node.getparent().remove(node)
 
     def set_publish_year(self, year):
         node = self._get('//fb:description/fb:publish-info/fb:year')
         if node is None:
             parent = self._get('//fb:description/fb:publish-info')
+            if parent is None:
+                descr_node = self._get('//fb:description')
+                parent = self._sub_element(descr_node, 'fb:publish-info')
             node = self._sub_element(parent, 'fb:year')
-        node.text = year
+        if year:
+            node.text = year
+        else:
+           node.getparent().remove(node) 
 
     def set_publish_city(self, city):
         node = self._get('//fb:description/fb:publish-info/fb:city')
         if node is None:
             parent = self._get('//fb:description/fb:publish-info')
+            if parent is None:
+                descr_node = self._get('//fb:description')
+                parent = self._sub_element(descr_node, 'fb:publish-info')
             node = self._sub_element(parent, 'fb:city')
-        node.text = city    
+        if city:
+            node.text = city
+        else:
+            node.getparent().remove(node)
 
     def set_publish_isbn(self, isbn):
         node = self._get('//fb:description/fb:publish-info/fb:isbn')
         if node is None:
             parent = self._get('//fb:description/fb:publish-info')
+            if parent is None:
+                descr_node = self._get('//fb:description')
+                parent = self._sub_element(descr_node, 'fb:publish-info')
             node = self._sub_element(parent, 'fb:isbn')
-        node.text = isbn
+        if isbn:
+            node.text = isbn
+        else:
+           node.getparent().remove(node) 
 
     def set_publish_series(self, series):
         node = self._get('//fb:description/fb:publish-info/fb:sequence')
         if series:
             if node is None:
                 parent = self._get('//fb:description/fb:publish-info')
+                if parent is None:
+                    descr_node = self._get('//fb:description')
+                    parent = self._sub_element(descr_node, 'fb:publish-info')
                 node = self._sub_element(parent, 'fb:sequence')
             node.attrib['name'] = series
         else:
@@ -250,6 +286,9 @@ class Fb2():
         if series_index:
             if node is None:
                 parent = self._get('//fb:description/fb:publish-info')
+                if parent is None:
+                    descr_node = self._get('//fb:description')
+                    parent = self._sub_element(descr_node, 'fb:publish-info')
                 node = self._sub_element(parent, 'fb:sequence')
             node.attrib['number'] = str(series_index)
         else:

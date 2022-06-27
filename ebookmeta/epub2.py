@@ -161,12 +161,13 @@ class Epub2():
 
     def set_author_list(self, author_list):
         node_list = self._get_all('opf:metadata/dc:creator[@opf:role="aut" or not(@opf:role)]')
-        for node in node_list: node.parent().remove(node)
+        for node in node_list: node.getparent().remove(node)
         meta_node = self._get('opf:metadata')
         for author in author_list:
-            node = self._sub_element(meta_node, 'dc:creator')
-            node.attrib['role'] = 'aut'
-            node.text = author
+            if author:
+                node = self._sub_element(meta_node, 'dc:creator')
+                node.attrib['role'] = 'aut'
+                node.text = author
 
     def set_series(self, series):
         node = self._get('opf:metadata/opf:meta[@name="calibre:series"]')
@@ -204,18 +205,20 @@ class Epub2():
         for node in node_list: node.getparent().remove(node)
         meta_node = self._get('opf:metadata')
         for tag in tag_list:
-            node = self._sub_element(meta_node, 'dc:subject')
-            node.text = tag
-            node.tail = '\n'
+            if tag:
+                node = self._sub_element(meta_node, 'dc:subject')
+                node.text = tag
+                node.tail = '\n'
 
     def set_translator_list(self, translator_list):
         node_list = self._get_all('opf:metadata/dc:creator[@opf:role="trl"]')
         for node in node_list: node.getparent().remove(node)
         meta_node = self._get('opf:metadata')
         for translator in translator_list:
-            node = self._sub_element(meta_node, 'dc:creator')
-            node.attrib['role'] = 'trl'
-            node.text = translator
+            if translator:
+                node = self._sub_element(meta_node, 'dc:creator')
+                node.attrib['role'] = 'trl'
+                node.text = translator
 
     def set_cover_data(self, href, media_type, data):
         (href, _, _) = self.get_cover_data()

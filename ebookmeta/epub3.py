@@ -64,18 +64,19 @@ class Epub3(Epub2):
         meta_node = self._get('opf:metadata')
         index = 1 
         for person in person_list:
-            node = self._sub_element(meta_node, 'dc:creator')
-            node.text = person
-            node.attrib['id'] = '{0}{1:02d}'.format(role, index)
-            node.tail = '\n'
-            refine = self._sub_element(meta_node, 'opf:meta')
-            refine.attrib['refines'] = '#{0}{1:02d}'.format(role, index)
-            refine.attrib['scheme']='marc:relators'
-            refine.attrib['property'] = 'role'
-            refine.text = role
-            refine.tail = '\n'
+            if person:
+                node = self._sub_element(meta_node, 'dc:creator')
+                node.text = person
+                node.attrib['id'] = '{0}{1:02d}'.format(role, index)
+                node.tail = '\n'
+                refine = self._sub_element(meta_node, 'opf:meta')
+                refine.attrib['refines'] = '#{0}{1:02d}'.format(role, index)
+                refine.attrib['scheme']='marc:relators'
+                refine.attrib['property'] = 'role'
+                refine.text = role
+                refine.tail = '\n'
 
-            index += 1
+                index += 1
 
     def _get_title_node(self):
         node_list = self._get_all('opf:metadata/dc:title')

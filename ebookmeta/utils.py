@@ -1,6 +1,10 @@
 import os 
 import re
+import sys
 import pathlib
+import datetime
+import locale
+
 
 def xstr(string):
     if string is None:
@@ -10,7 +14,12 @@ def xstr(string):
 
 
 def str_to_list(s):
-    return [x.strip() for x in s.split(',')]
+    s = s.strip()
+    result = []
+    for x in s.split(','):
+        result.append(x.strip())
+    
+    return result
 
 def person_sort_name(name, first_delimiter=' '):
 
@@ -113,3 +122,20 @@ def normalize_path(path):
         clean_p.append(normalize_part(part))
     
     return str(pathlib.Path(*clean_p))
+
+
+def get_file_creation_time(file):
+    locale.setlocale(locale.LC_ALL, '')
+
+    time = None
+    if sys.platform == 'win32':
+        time = os.path.getctime(file)
+    else:
+        time = os.stat(file).st_birthtime
+
+    return datetime.datetime.fromtimestamp(time).strftime('%x %X')
+
+def get_file_modified_time(file):
+    locale.setlocale(locale.LC_ALL, '')
+    time = os.stat(file).st_mtime
+    return datetime.datetime.fromtimestamp(time).strftime('%x %X')
