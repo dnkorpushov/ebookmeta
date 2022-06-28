@@ -130,8 +130,10 @@ def get_file_creation_time(file):
     time = None
     if sys.platform == 'win32':
         time = os.path.getctime(file)
-    else:
+    elif sys.platform == 'darwin':
         time = os.stat(file).st_birthtime
+    else:
+        time = os.path.getctime(file)
 
     return datetime.datetime.fromtimestamp(time).strftime('%x %X')
 
