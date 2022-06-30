@@ -58,7 +58,7 @@ ebookmeta.set_metadata('test.epub', meta)  # Set epub metadata from Metadata cla
 * tags - book tags
 * lang - book language
 * description - book description
-* translators - book translators (if exsists)
+* translators - book translators (if exists)
 * format - file format (epub or fb2)
 * format_version - format specification version 
 * cover_image_data - cover image byte array
@@ -82,7 +82,7 @@ ebookmeta.set_metadata('test.epub', meta)  # Set epub metadata from Metadata cla
 * translator_list_to_string - return translators list as comma-separated string
 * tag_list_to_string - return tag list as comma-separated string
 * tag_description_list_to_string - for fb2 return tag description  list as comma-separated string, for epub same tag_list_to_string data
-* set_author_list_from_string - sets autors list from comma-separated string
+* set_author_list_from_string - sets authors list from comma-separated string
 * set_translator_list_from_string - sets translators list from comma-separated string
 * set_tag_list_from_string - sets tags list from comma-separated string
 * get_filename_by_pattern - returns the file name generated based on the metadata according to the given template
@@ -99,7 +99,7 @@ new_filename = meta.get_filename_by_pattern('#Author. #Title', '#l{ #fi.}')
 ```
 For example, for epub Azimov's Foundation book, return "Azimov I. Foundation.epub" string.
 
-You can group tempalte parts into optional blocks. An optional block is denoted with curly braces {}. An optional block must contain only one placeholder and any number of other characters. The optional block is completely excluded from the result if the value of the placeholder is None. Optional blocks can't be nested.
+You can group template parts into optional blocks. An optional block is denoted with curly braces {}. An optional block must contain only one placeholder and any number of other characters. The optional block is completely excluded from the result if the value of the placeholder is None. Optional blocks can't be nested.
 Usage:
 ```
 meta1 = ebook.get_metadata('book_with_series.epub')
