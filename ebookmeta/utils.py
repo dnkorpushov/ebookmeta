@@ -125,8 +125,6 @@ def normalize_path(path):
 
 
 def get_file_creation_time(file):
-    locale.setlocale(locale.LC_ALL, '')
-
     time = None
     if sys.platform == 'win32':
         time = os.path.getctime(file)
@@ -135,9 +133,8 @@ def get_file_creation_time(file):
     else:
         time = os.path.getctime(file)
 
-    return datetime.datetime.fromtimestamp(time).strftime('%x %X')
+    return datetime.datetime.fromtimestamp(time).isoformat()
 
 def get_file_modified_time(file):
-    locale.setlocale(locale.LC_ALL, '')
     time = os.stat(file).st_mtime
-    return datetime.datetime.fromtimestamp(time).strftime('%x %X')
+    return datetime.datetime.fromtimestamp(time).isoformat()

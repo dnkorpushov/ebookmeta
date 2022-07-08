@@ -79,7 +79,7 @@ class Metadata:
     def get_filename_by_pattern(self, filename_pattern, author_pattern, padnum=2):
         d = { '#Title': '', '#Series': '', '#Abbrseries': '',
               '#Number': '', '#Padnumber': '',
-              '#Author': '', '#Authors': '', '#Translator': '',
+              '#Author': '', '#Authors': '', '#Translator': '', '#Atranslator': '', '#Atranslators':'',
               '#Bookid': '', '#Md5': ''
             }
 
@@ -97,11 +97,13 @@ class Metadata:
                 d['#Number'] = str(self.series_index)
                 d['#Padnumber'] = str(self.series_index).strip().zfill(padnum)
 
-            if len(self.translator_list) > 0:
-                try:
-                    d['#Translator'] = self.translator_list[0].split()[-1]
-                except:
-                    d['#Translator'] = ''
+        if len(self.translator_list) > 0:
+            try:
+                d['#Translator'] = self.translator_list[0].split()[-1]
+            except:
+                d['#Translator'] = ''
+        d['#Atranslator'] = self._get_translators_by_pattern(author_pattern, short=True)
+        d['#Atranslators'] = self._get_translators_by_pattern(author_pattern, short=False)
 
         with open(self.file, 'rb') as f:
             data = f.read()
@@ -132,6 +134,22 @@ class Metadata:
             result = []
             for author in self.author_list:
                 result.append(replace_keywords(pattern, self._get_person_dict(author)))
+            return ', '.join(result)
+
+
+    def _get_translators_by_pattern(self, pattern, short=True):
+        if len(self.translator_list) == 0:
+            return ''
+
+        if short and len(self.translator_list) > 1:
+            if self.lang == 'ru':
+                return replace_keywords(pattern, self._get_person_dict(self.translator_list[0])) + ' и др'
+            else:
+                return replace_keywords(pattern, self._get_person_dict(self.translator_list[0])) + ', et al'
+        else:
+            result = []
+            for translator in self.translator_list:
+                result.append(replace_keywords(pattern, self._get_person_dict(translator)))
             return ', '.join(result)
 
 
