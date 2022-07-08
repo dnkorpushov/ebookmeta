@@ -65,8 +65,8 @@ ebookmeta.set_metadata('test.epub', meta)  # Set epub metadata from Metadata cla
 * cover_media_type - cover media type (possible image/jpeg, image/png)
 * cover_file_name - stored file name
 * file - source file name
-* file_created - file creation time in locale format
-* file_modified - file modification time in locale format
+* file_created - file creation time in ISO datetime format
+* file_modified - file modification time in ISO datetime format
 
 #### Additional attributes for fb2 
 * publish_info.title - published book title
