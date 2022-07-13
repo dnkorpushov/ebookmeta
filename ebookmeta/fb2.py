@@ -10,6 +10,8 @@ ns_map = {
     'l': 'http://www.w3.org/1999/xlink'
 }
 
+
+
 class Fb2():
     def __init__(self, file):
         self.file = file
@@ -26,11 +28,11 @@ class Fb2():
             
             if self.zip_file_info:
                 content = zipfile.read(self.zip_file_info)
-                self.tree = etree.parse(BytesIO(content), parser=etree.XMLParser(recover=True))
+                self.tree = etree.parse(BytesIO(content), parser=etree.XMLParser(recover=True, remove_blank_text=True))
                 self.encoding = self.tree.docinfo.encoding
                 zipfile.close()
         else:
-            self.tree = etree.parse(self.file, parser=etree.XMLParser(recover=True))
+            self.tree = etree.parse(self.file, parser=etree.XMLParser(recover=True, remove_blank_text=True))
             self.encoding = self.tree.docinfo.encoding
 
     ######## Getters ########
@@ -160,9 +162,7 @@ class Fb2():
                 parent = self._get('//fb:description/fb:title-info')
                 node = self._sub_element(parent, 'fb:sequence')
             node.attrib['number'] = str(series_index)
-        else:
-            if node is not None:
-                node.getparent().remove(node)
+
 
     def set_lang(self, lang):
         node = self._get('//fb:description/fb:title-info/fb:lang')
@@ -305,7 +305,7 @@ class Fb2():
         if is_zipfile(self.file):
             zipfile = ZipFile(self.file, mode='w')
             zipfile.writestr(self.zip_file_info,
-                       etree.tostring(self.tree, encoding=self.encoding,
+                       etree.tostring(self.tree.getroot(), encoding=self.encoding,
                                       method='xml', xml_declaration=True, pretty_print=True))
             zipfile.close()
         else:
