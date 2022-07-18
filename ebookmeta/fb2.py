@@ -205,7 +205,16 @@ class Fb2():
             node.attrib['id'] = href
             node.attrib['content-type'] = media_type
         
-        node.text = base64.encodebytes(data)
+        if data:
+            node.text = base64.encodebytes(data)
+        else:
+            # Delete old cover image
+            if node is not None:
+                node.getparent().remove(node)
+
+            node = self._get('//fb:description/fb:title-info/fb:coverpage')
+            if node is not None:
+                 node.getparent().remove(node)
 
     def set_publish_title(self, title):
         node = self._get('//fb:description/fb:publish-info/fb:book-name')
