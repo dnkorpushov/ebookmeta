@@ -14,7 +14,8 @@ def xstr(string):
 
 
 def str_to_list(s):
-    s = s.strip()
+    if s:
+        s = s.strip()
     result = []
     for x in s.split(','):
         result.append(x.strip())

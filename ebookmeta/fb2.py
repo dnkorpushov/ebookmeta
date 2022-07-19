@@ -11,7 +11,6 @@ ns_map = {
 }
 
 
-
 class Fb2():
     def __init__(self, file):
         self.file = file
@@ -200,7 +199,7 @@ class Fb2():
             image_node.attrib[etree.QName('http://www.w3.org/1999/xlink', 'href')] = '#{}'.format(href)
 
         node = self._get('//fb:binary[@id="{0}"]'.format(href))
-        if node is None:
+        if node is None and href:
             node = self._sub_element(self.tree.getroot(), 'fb:binary')
             node.attrib['id'] = href
             node.attrib['content-type'] = media_type
