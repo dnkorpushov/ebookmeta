@@ -161,6 +161,9 @@ class Fb2():
                 parent = self._get('//fb:description/fb:title-info')
                 node = self._sub_element(parent, 'fb:sequence')
             node.attrib['number'] = str(series_index)
+        else:
+            if node is not None and 'number' in node.attrib:
+                node.attrib.pop('number')  
 
 
     def set_lang(self, lang):
