@@ -308,8 +308,8 @@ class Fb2():
                 node = self._sub_element(parent, 'fb:sequence')
             node.attrib['number'] = str(series_index)
         else:
-            if node is not None:
-                node.getparent().remove(node)
+            if node is not None and 'number' in node.attrib:
+                node.attrib.pop('number')
 
     ######## Service methods ########
     def save(self):

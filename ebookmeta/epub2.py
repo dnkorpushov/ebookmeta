@@ -2,6 +2,7 @@ import os
 import posixpath
 import tempfile
 import shutil
+import urllib.parse
 from lxml import etree, html
 from .myzipfile import ZipFile, is_zipfile, ZIP_DEFLATED, ZIP_STORED
 from .utils import xstr
@@ -102,7 +103,7 @@ class Epub2():
             if node is not None:
                 if 'href' in node.attrib: href = node.attrib['href']
                 if 'media-type' in node.attrib: media_type = node.attrib['media-type']
-            if href: data = self._get_file_content(self.content_root + href)
+            if href: data = self._get_file_content(self.content_root + urllib.parse.unquote(href))
         else:
             (href, media_type, data) = self._get_cover_from_first_element()
         return (href, media_type, data)
@@ -124,7 +125,7 @@ class Epub2():
         if media_type:
             href = node.attrib['href'] 
             if href:
-                content = self._get_file_content(self.content_root + href)
+                content = self._get_file_content(self.content_root + urllib.parse.unquote(href))
                 tree = html.fromstring(content)
                 nodes = tree.xpath('//img')
                 for node in nodes:
@@ -239,9 +240,9 @@ class Epub2():
                     dest_zip.writestr(self.opf, etree.tostring(self.tree, encoding='utf-8',
                                       method='xml', xml_declaration=True, pretty_print=True))
 
-                elif f.filename == self.content_root + xstr(self.cover_href):
+                elif f.filename == self.content_root + urllib.parse.unquote(xstr(self.cover_href)):
                     if self.cover_data:
-                        dest_zip.writestr(self.content_root + self.cover_href, self.cover_data)
+                        dest_zip.writestr(self.content_root + urllib.parse.unquote(self.cover_href), self.cover_data)
                 elif f.filename == 'mimetype':
                     buf = src_zip.read(f)
                     dest_zip.writestr(f.filename, buf, ZIP_STORED)

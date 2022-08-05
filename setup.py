@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name='ebookmeta',
-    version='1.2.7',
+    version='1.2.8',
     author='Dmitrii Korpushov',
     author_email='dnkorpushov@gmail.com',
     packages=['ebookmeta'],
