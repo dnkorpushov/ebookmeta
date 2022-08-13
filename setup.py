@@ -1,3 +1,4 @@
+from pathlib import Path
 from setuptools import setup
 
 
@@ -10,6 +11,7 @@ setup(
     url='https://github.com/dnkorpushov/ebookmeta',
     license='MIT',
     description='Read/write ebook metadata for fb2, epub2 and epub3 files',
+    long_description=(Path(__file__).parent / "README.md").read_text(),
     keywords=['ebook', 'epub', 'metadata', 'fb2'],
     classifiers=[
         'Operating System :: OS Independent',

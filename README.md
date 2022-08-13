@@ -13,9 +13,6 @@ There is a limitation for epub files: you can't add cover if it doesn't exist in
 
 This library used in my other project [Libro2](https://github.com/dnkorpushov/libro2) - GUI tool for editing metadata, rename and convert to other formats for ebook files.
 
-P.S. 
-Sorry for my English
-
 ## Installation
 ### Using pip
 ```pip3 install ebookmeta```
