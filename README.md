@@ -52,7 +52,7 @@ ebookmeta.set_metadata('test.epub', meta)  # Set epub metadata from Metadata cla
 * author_list - list of book authors
 * series - book series title
 * series_index - book series index
-* tags - book tags
+* tag_list - book tag list
 * lang - book language
 * description - book description
 * translators - book translators (if exists)
