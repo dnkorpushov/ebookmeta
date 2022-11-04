@@ -18,6 +18,8 @@ class Fb2():
         self.encoding = None
         self.zip_file_info = None
 
+        self.ns_map = {}
+
         if is_zipfile(self.file):
             zipfile = ZipFile(self.file)
             for info in zipfile.infolist():
@@ -33,6 +35,16 @@ class Fb2():
         else:
             self.tree = etree.parse(self.file, parser=etree.XMLParser(recover=True, remove_blank_text=True))
             self.encoding = self.tree.docinfo.encoding
+
+
+        if self.tree is not None:
+            root = self.tree.getroot()
+            for k, v in root.nsmap.items():
+                if k is None:
+                    self.ns_map['fb'] = v
+                if k in ('l', 'xlink'):
+                    self.ns_map['l'] = v
+
 
     ######## Getters ########
     def get_title(self):
@@ -365,13 +377,13 @@ class Fb2():
 
 
     def _get(self, xpath):
-        node_list = self.tree.xpath(xpath, namespaces=ns_map)
+        node_list = self.tree.xpath(xpath, namespaces=self.ns_map)
         for node in node_list:
             return node
 
     def _get_all(self, xpath):
-        return self.tree.xpath(xpath, namespaces=ns_map)
+        return self.tree.xpath(xpath, namespaces=self.ns_map)
 
     def _sub_element(self, parent, name):
         ns, tag = name.split(':')
-        return etree.SubElement(parent, etree.QName(ns_map[ns], tag))
+        return etree.SubElement(parent, etree.QName(self.ns_map[ns], tag))
