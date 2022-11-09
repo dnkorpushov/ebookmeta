@@ -44,6 +44,11 @@ class Fb2():
                     self.ns_map['fb'] = v
                 if k in ('l', 'xlink'):
                     self.ns_map['l'] = v
+            
+            if not 'fb' in self.ns_map.keys():
+                self.ns_map['fb'] = ns_map['fb']
+            if not 'l' in self.ns_map.keys():
+                self.ns_map['l'] = ns_map['l']
 
 
     ######## Getters ########
