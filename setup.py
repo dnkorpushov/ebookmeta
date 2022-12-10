@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name='ebookmeta',
-    version='1.2.10',
+    version='1.2.11',
     author='Dmitrii Korpushov',
     author_email='dnkorpushov@gmail.com',
     packages=['ebookmeta'],

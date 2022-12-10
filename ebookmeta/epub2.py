@@ -167,7 +167,7 @@ class Epub2():
         for author in author_list:
             if author:
                 node = self._sub_element(meta_node, 'dc:creator')
-                node.attrib['role'] = 'aut'
+                node.attrib['{http://www.idpf.org/2007/opf}role'] = 'aut'
                 node.text = author
 
     def set_series(self, series):
@@ -218,7 +218,7 @@ class Epub2():
         for translator in translator_list:
             if translator:
                 node = self._sub_element(meta_node, 'dc:creator')
-                node.attrib['role'] = 'trl'
+                node.attrib['{http://www.idpf.org/2007/opf}:role'] = 'trl'
                 node.text = translator
 
     def set_cover_data(self, href, media_type, data):
