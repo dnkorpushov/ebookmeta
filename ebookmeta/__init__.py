@@ -38,7 +38,10 @@ def get_metadata(file):
     meta.tag_list = ebook.get_tag_list()
     meta.translator_list = ebook.get_translator_list()
     (meta.cover_file_name, meta.cover_media_type, meta.cover_image_data) = ebook.get_cover_data()
-    meta.format = ebook.get_format()
+    if file.lower().endswith('.fb2.zip'):
+        meta.format = ebook.get_format_if_zip()
+    else:
+        meta.format = ebook.get_format()
     meta.format_version = ebook.get_format_version()
     meta.file = file
     meta.file_created = get_file_creation_time(file)
