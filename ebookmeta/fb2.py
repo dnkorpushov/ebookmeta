@@ -94,6 +94,9 @@ class Fb2():
 
     def get_format(self):
         return 'fb2'
+
+    def get_format_if_zip(self):
+        return 'fb2.zip'
     
     def get_format_version(self):
         return '2.0'
