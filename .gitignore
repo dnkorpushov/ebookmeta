@@ -1,5 +1,7 @@
 build/
 dist/
+env/
+.vscode/
 *.egg-info/
 *.pyc
 .DS_Store
